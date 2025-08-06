@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
     <link rel="stylesheet" as="style" onload="this.rel='stylesheet'" href="https://fonts.googleapis.com/css2?display=swap&family=Inter%3Awght%40400%3B500%3B600%3B700%3B900&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
-    <title>FBA Shipment Cost Estimator</title>
+    <title>FBA Shipment Cost Estimator (Debug Mode)</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <style>
         #resultsPane {
@@ -111,6 +111,7 @@
     };
    
     async function fetchAndParseData() {
+        console.log("--- SCRIPT START ---");
         console.log("Step 1: Fetching data from Google Sheets...");
         const sheetName = 'Admin_PricingData';
         const range = `${sheetName}!A1:J50`;
@@ -120,81 +121,85 @@
             if (!response.ok) throw new Error(`Google Sheets API Error: ${(await response.json()).error.message}`);
             const data = await response.json();
             const sheetValues = data.values;
-            console.log("Step 2: Data fetched. Parsing with direct, simple ranges...");
+            console.log("Step 2: Data fetched successfully. Parsing now...");
            
-            pricingData = {}; // Reset data object
+            pricingData = {};
 
             const cleanAndParse = (input, isFloat = true) => {
-                if (input === null || input === undefined) return 0;
+                if (input === null || input === undefined || input === "") return 0;
                 const cleanedString = String(input).replace(/,/g, '').trim();
+                if (cleanedString === "") return 0;
                 const num = isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
                 return isNaN(num) ? 0 : num;
             };
 
-            const getRowData = (arr) => ({
-                basePrice: cleanAndParse(arr[1]),
-                includedCartons: cleanAndParse(arr[2], false),
-                includedSKUs: cleanAndParse(arr[3], false)
+            const getRowData = (arr) => {
+                if (!arr) return { basePrice: 0, includedCartons: 0, includedSKUs: 0 };
+                return {
+                    basePrice: cleanAndParse(arr[1]),
+                    includedCartons: cleanAndParse(arr[2], false),
+                    includedSKUs: cleanAndParse(arr[3], false)
+                };
+            };
+           
+            pricingData.locations = {
+                'LOS ANGELES': {
+                    '20GP': getRowData(sheetValues[2]), '40GP/HQ': getRowData(sheetValues[3]), '45HQ': getRowData(sheetValues[4])
+                },
+                'SAVANNAH': {
+                    '20GP': getRowData(sheetValues[8]), '40GP/HQ': getRowData(sheetValues[9]), '45HQ': getRowData(sheetValues[10])
+                },
+                'NEW YORK': {
+                    '20GP': getRowData(sheetValues[14]), '40GP/HQ': getRowData(sheetValues[15]), '45HQ': getRowData(sheetValues[16])
+                }
+            };
+
+            pricingData.carrier = {};
+            const carrierDataRows = sheetValues.slice(20, 23);
+            carrierDataRows.forEach(row => {
+                 if(row && row[0]) {
+                    const locKey = String(row[0]).toUpperCase().trim();
+                    pricingData.carrier[locKey] = {
+                        carrier: row[1], drayRate: cleanAndParse(row[2]), chassisCost: cleanAndParse(row[3]),
+                        standardChassisDays: cleanAndParse(row[4], false), freeChassisDays: cleanAndParse(row[5], false),
+                        csrCommission: cleanAndParse(row[6])
+                    };
+                }
             });
            
-            // --- PARSE LOCATIONS ---
-            try {
-                pricingData.locations = {
-                    'LOS ANGELES': {'20GP': getRowData(sheetValues[2]),'40GP/HQ': getRowData(sheetValues[3]),'45HQ': getRowData(sheetValues[4])},
-                    'SAVANNAH': {'20GP': getRowData(sheetValues[8]),'40GP/HQ': getRowData(sheetValues[9]),'45HQ': getRowData(sheetValues[10])},
-                    'NEW YORK': {'20GP': getRowData(sheetValues[14]),'40GP/HQ': getRowData(sheetValues[15]),'45HQ': getRowData(sheetValues[16])}
-                };
-            } catch (e) { throw new Error("Failed to parse Location pricing tables. Check rows 3-17 and ensure they have data."); }
-
-            // --- PARSE CARRIER ---
-            try {
-                pricingData.carrier = {};
-                const carrierDataRows = sheetValues.slice(20, 23); // Rows 21-23
-                carrierDataRows.forEach(row => {
-                     if(row && row[0]) {
-                        const locKey = String(row[0]).toUpperCase().trim();
-                        pricingData.carrier[locKey] = {
-                            carrier: row[1], drayRate: cleanAndParse(row[2]), chassisCost: cleanAndParse(row[3]),
-                            standardChassisDays: cleanAndParse(row[4], false), freeChassisDays: cleanAndParse(row[5], false),
-                            csrCommission: cleanAndParse(row[6])
-                        };
-                    }
-                });
-            } catch (e) { throw new Error("Failed to parse Carrier pricing table. Check rows 21-23."); }
-           
-            // --- PARSE CHARGES & VALUES ---
-            try {
-                pricingData.charges = {};
-                pricingData.values = {};
-                const chargesDataRows = sheetValues.slice(2, 13);  // Rows 3-13
-                chargesDataRows.forEach(row => {
-                    if (row && row[8]) pricingData.charges[String(row[8]).trim()] = cleanAndParse(row[9]);
-                });
-                const limitsDataRows = sheetValues.slice(16, 28); // Rows 17-28
-                limitsDataRows.forEach(row => {
-                    if (row && row[8]) {
-                        const key = String(row[8]).trim();
-                        const value = String(row[9] || '').trim();
-                        if (key.includes('40GP/HQ')) {
-                            pricingData.values[key] = { min: cleanAndParse(value.split('-')[0]), max: cleanAndParse(value.split('-')[1]) };
+            pricingData.charges = {};
+            pricingData.values = {};
+            const chargesDataRows = sheetValues.slice(2, 13);
+            chargesDataRows.forEach(row => {
+                if (row && row[8]) pricingData.charges[String(row[8]).trim()] = cleanAndParse(row[9]);
+            });
+            const limitsDataRows = sheetValues.slice(16, 28);
+            limitsDataRows.forEach(row => {
+                if (row && row[8]) {
+                    const key = String(row[8]).trim();
+                    const value = String(row[9] || '').trim();
+                    if (key) {
+                        if (key === 'Container Threshold CBM (40GP/HQ)') {
+                            const parts = value.split('-');
+                            pricingData.values[key] = { min: cleanAndParse(parts[0]), max: cleanAndParse(parts[1]) };
                         } else {
                             pricingData.values[key] = value.includes('>') ? cleanAndParse(value.replace('>', '')) : cleanAndParse(value);
                         }
                     }
-                });
-            } catch (e) { throw new Error("Failed to parse Charges/Values tables. Check columns I & J."); }
+                }
+            });
 
-            console.log("Step 3: Data parsing complete.", pricingData);
-
+            console.log("Step 3: Data parsing complete. Final data object:", pricingData);
             elements.palletNote.innerHTML = `<strong>Note:</strong> Pallet count ranges are estimated using an Operations value of ${pricingData.values['CBM per Pallet (Operations)']} and Warehouse value of ${pricingData.values['CBM per Pallet (Warehouse)']} CBM/pallet.`;
 
         } catch (error) {
-            alert(`Error during data loading: ${error.message} Please check the Developer Console (F12).`);
+            alert(`A critical error occurred while loading data from the sheet. The sheet structure may be incorrect. Please check the Developer Console (F12).`);
             console.error("Data Loading Error:", error);
         }
     }
 
     function calculateEstimate() {
+        console.log("--- Starting Calculation ---");
         try {
             const cbm = parseFloat(elements.cbm.value);
             const cartonCount = parseInt(elements.cartonCount.value);
@@ -202,24 +207,24 @@
             const loadType = elements.loadType.value;
             const locationInput = elements.location.value;
             const storage = elements.storage.value;
+            console.log("Inputs:", { cbm, cartonCount, skuCount, loadType, locationInput, storage });
 
             if (isNaN(cbm) || cbm <= 0 || isNaN(cartonCount) || cartonCount <= 0) { alert('Please enter valid numbers for CBM and Carton Count.'); return; }
             if (!loadType || !locationInput) { alert('Please select a Type of Load and a Location.'); return; }
 
             const th20GP = pricingData.values['Container Threshold CBM (20GP)'];
             const th40GP = pricingData.values['Container Threshold CBM (40GP/HQ)'];
+            console.log("Thresholds:", { th20GP, th40GP });
            
             let containerType;
-            if (cbm <= th20GP) {
-                containerType = '20GP';
-            } else if (cbm >= th40GP.min && cbm <= th40GP.max) {
-                containerType = '40GP/HQ';
-            } else {
-                containerType = '45HQ';
-            }
+            if (cbm <= th20GP) { containerType = '20GP'; }
+            else if (cbm >= th40GP.min && cbm <= th40GP.max) { containerType = '40GP/HQ'; }
+            else { containerType = '45HQ'; }
+            console.log("Determined Container Type:", containerType);
            
             const basePricing = pricingData.locations[locationInput][containerType];
             if (!basePricing) { alert(`Error: Could not find base pricing for "${locationInput}" and container "${containerType}".`); return; }
+            console.log("Found Base Pricing:", basePricing);
 
             if (isNaN(skuCount) || skuCount <= 0) { skuCount = basePricing.includedSKUs; }
            
@@ -228,18 +233,19 @@
 
             let cartonSurcharge = (cartonCount > basePricing.includedCartons) ? (cartonCount - basePricing.includedCartons) * (pricingData.charges[cartonSurchargeKey] || 0) : 0;
             let skuSurcharge = (skuCount > basePricing.includedSKUs) ? (skuCount - basePricing.includedSKUs) * (pricingData.charges[skuSurchargeKey] || 0) : 0;
-           
+            console.log("Surcharges:", { cartonSurcharge, skuSurcharge });
+
             const carrierCosts = pricingData.carrier[locationInput];
             if (!carrierCosts) { alert(`Error: Could not find carrier pricing for "${locationInput}".`); return; }
+            console.log("Found Carrier Costs:", carrierCosts);
 
             let actualChassisCost = (carrierCosts.standardChassisDays > carrierCosts.freeChassisDays) ? carrierCosts.chassisCost : 0;
             const totalCarrierCost = carrierCosts.drayRate + actualChassisCost + carrierCosts.csrCommission;
-           
             const storageFee = (storage === 'Yes') ? (cbm * (pricingData.charges['Storage CBM/Day (All)'] || 0)) : 0;
             const commonCosts = basePricing.basePrice + cartonSurcharge + skuSurcharge + totalCarrierCost + storageFee;
+            console.log("Final Costs:", { basePrice: basePricing.basePrice, totalSurcharges: cartonSurcharge + skuSurcharge, totalCarrierCost, storageFee, totalCommon: commonCosts });
            
             elements.containerType.textContent = containerType;
-
             if (loadType === 'Palletized') {
                 const opCBM = pricingData.values['CBM per Pallet (Operations)'];
                 const whCBM = pricingData.values['CBM per Pallet (Warehouse)'];
@@ -252,14 +258,13 @@
                 const highEndRate = commonCosts + whSurcharge;
                 elements.palletCount.innerHTML = `<span class="range">${opPallets} - ${whPallets}</span>`;
                 elements.allInRate.innerHTML = `<span class="range">${lowEndRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} - ${highEndRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</span>`;
-            } else { // Floor in/Floor out
+            } else {
                 elements.palletCount.textContent = '-';
                 elements.allInRate.textContent = commonCosts.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
             }
-           
             elements.resultsPane.classList.add('visible');
         } catch (error) {
-            alert("A calculation error occurred. This is often due to missing or incorrect data in the Google Sheet. Please check the Developer Console (F12) for details.");
+            alert("A critical calculation error occurred. The sheet data may be missing or structured incorrectly. Please check the Developer Console (F12) for details.");
             console.error("Calculation Error:", error);
         }
     }
@@ -283,31 +288,13 @@
         } else {
             alert("Incorrect password. Access denied.");
         }
-
         elements.startBtn.addEventListener('click', () => {
             elements.welcomePage.style.display = 'none';
             elements.calculatorPage.style.display = 'flex';
             elements.resultsPane.style.display = 'none';
         });
-
         elements.calculateBtn.addEventListener('click', calculateEstimate);
         elements.clearBtn.addEventListener('click', clearForm);
-
-        // 'Enter' key navigation
-        const inputs = [elements.cbm, elements.cartonCount, elements.skuCount];
-        inputs.forEach((input, index) => {
-            input.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    const nextInput = inputs[index + 1];
-                    if (nextInput) {
-                        nextInput.focus();
-                    } else {
-                        elements.loadType.focus();
-                    }
-                }
-            });
-        });
     }
    
     initialize();
