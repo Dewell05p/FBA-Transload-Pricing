@@ -119,14 +119,18 @@
             if (!response.ok) throw new Error(`Google Sheets API Error: ${(await response.json()).error.message}`);
             const data = await response.json();
             const sheetValues = data.values;
+
+            // *** DIAGNOSTIC STEP: Log the raw data to the console ***
+            console.log("--- RAW GOOGLE SHEET DATA (First 25 Rows) ---");
+            console.table(sheetValues.slice(0, 25));
+            // **********************************************************
            
-            // *** NEW INTELLIGENT PARSING LOGIC ***
             const cleanAndParse = (input, isFloat = true) => {
                 const cleanedString = String(input || '0').replace(/,/g, '').trim();
                 return isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
             };
 
-            const findHeaderRow = (textToFind) => sheetValues.findIndex(row => row && row[0] && row[0].trim().toUpperCase().includes(textToFind.toUpperCase()));
+            const findHeaderRow = (textToFind, colIndex = 0) => sheetValues.findIndex(row => row && row[colIndex] && row[colIndex].trim().toUpperCase().includes(textToFind.toUpperCase()));
 
             const getRowData = (arr) => ({
                 basePrice: cleanAndParse(arr[1]),
@@ -159,14 +163,15 @@
            
             pricingData.extraCharges = {};
             pricingData.limitations = {};
-            for(let i = 1; i < sheetValues.length; i++) {
+            const chargesHeaderRow = findHeaderRow('Description', 8) + 1; // Find 'Description' in Column I (index 8)
+            for(let i = chargesHeaderRow; i < sheetValues.length; i++) {
                 if(sheetValues[i] && sheetValues[i][8]){
                     const key = String(sheetValues[i][8]).trim();
                     const value = sheetValues[i][9];
                     if (value !== null && value !== undefined) {
                         if(key.toLowerCase().includes('cbm') || key.toLowerCase().includes('max') || key.toLowerCase().includes('threshold') || key.toLowerCase().includes('side')) {
                             pricingData.limitations[key] = value === '>65' ? 65 : cleanAndParse(value);
-                        } else {
+                        } else if (key) { // Ensure key is not empty
                            pricingData.extraCharges[key] = cleanAndParse(value);
                         }
                     }
@@ -186,6 +191,7 @@
 
     function calculateEstimate() {
         try {
+            // Calculation logic remains the same
             const cbm = parseFloat(elements.cbm.value);
             const cartonCount = parseInt(elements.cartonCount.value);
             let skuCount = parseInt(elements.skuCount.value);
@@ -211,7 +217,7 @@
 
             if (isNaN(skuCount) || skuCount <= 0) { skuCount = basePricing.includedSKUs; }
            
-            const cartonSurchargeKey = loadType === 'Palletized' ? 'Carton Surcharge (Floor in/Pallet out)' : 'Carton Surcharge (Floor in/Floor out)';
+            const cartonSurchargeKey = 'Carton Surcharge (Floor in/Floor out)';
             const skuSurchargeKey = 'Sort Surcharge (Floor in/Pallet out)';
 
             let cartonSurcharge = (cartonCount > basePricing.includedCartons) ? (cartonCount - basePricing.includedCartons) * (pricingData.extraCharges[cartonSurchargeKey] || 0) : 0;
