@@ -137,24 +137,18 @@
            
             pricingData.locations = {
                 'LOS ANGELES': {
-                    '20GP': getRowData(sheetValues[2]),    // Sheet Row 3
-                    '40GP/HQ': getRowData(sheetValues[3]), // Sheet Row 4
-                    '45HQ': getRowData(sheetValues[4])     // Sheet Row 5
+                    '20GP': getRowData(sheetValues[2]), '40GP/HQ': getRowData(sheetValues[3]), '45HQ': getRowData(sheetValues[4])
                 },
                 'SAVANNAH': {
-                    '20GP': getRowData(sheetValues[8]),    // Sheet Row 9
-                    '40GP/HQ': getRowData(sheetValues[9]), // Sheet Row 10
-                    '45HQ': getRowData(sheetValues[10])    // Sheet Row 11
+                    '20GP': getRowData(sheetValues[8]), '40GP/HQ': getRowData(sheetValues[9]), '45HQ': getRowData(sheetValues[10])
                 },
                 'NEW YORK': {
-                    '20GP': getRowData(sheetValues[14]),   // Sheet Row 15
-                    '40GP/HQ': getRowData(sheetValues[15]),// Sheet Row 16
-                    '45HQ': getRowData(sheetValues[16])    // Sheet Row 17
+                    '20GP': getRowData(sheetValues[14]), '40GP/HQ': getRowData(sheetValues[15]), '45HQ': getRowData(sheetValues[16])
                 }
             };
 
             pricingData.carrier = {};
-            const carrierDataRows = sheetValues.slice(20, 23); // Sheet Rows 21-23
+            const carrierDataRows = sheetValues.slice(20, 23);
             carrierDataRows.forEach(row => {
                  if(row && row[0]) {
                     const locKey = String(row[0]).toUpperCase().trim();
@@ -172,13 +166,18 @@
             chargesDataRows.forEach(row => {
                 if (row && row[8]) pricingData.extraCharges[String(row[8]).trim()] = cleanAndParse(row[9]);
             });
+
             const limitsDataRows = sheetValues.slice(17, 28);
             limitsDataRows.forEach(row => {
                 if (row && row[8]) {
                     const key = String(row[8]).trim();
-                    const value = String(row[9] || '');
-                    if (key.includes('40GP/HQ')) {
-                        pricingData.limitations[key] = cleanAndParse(value.split('-')[1]);
+                    const value = String(row[9] || '').trim();
+                    if (key === 'Container Threshold CBM (40GP/HQ)') {
+                        const parts = value.split('-');
+                        pricingData.limitations[key] = {
+                            min: cleanAndParse(parts[0]),
+                            max: cleanAndParse(parts[1])
+                        };
                     } else {
                         pricingData.limitations[key] = value.includes('>') ? cleanAndParse(value.replace('>', '')) : cleanAndParse(value);
                     }
@@ -189,10 +188,10 @@
 
             const opCBM = pricingData.limitations['CBM per Pallet (Operations)'];
             const whCBM = pricingData.limitations['CBM per Pallet (Warehouse)'];
-            elements.palletNote.innerHTML = `<strong>Note:</strong> Pallet count is an estimate based on an Operations value of ${opCBM} and Warehouse value of ${whCBM} CBM/pallet.`;
+            elements.palletNote.innerHTML = `<strong>Note:</strong> Pallet count ranges are estimated using an Operations value of ${opCBM} and Warehouse value of ${whCBM} CBM/pallet.`;
 
         } catch (error) {
-            alert(`A critical error occurred while loading data from the sheet. The sheet structure may be incorrect. Please check the Developer Console (F12).`);
+            alert(`Error during data loading. The sheet structure may be incorrect. Please check the Developer Console (F12).`);
             console.error("Data Loading Error:", error);
         }
     }
@@ -209,12 +208,17 @@
             if (isNaN(cbm) || cbm <= 0 || isNaN(cartonCount) || cartonCount <= 0) { alert('Please enter valid numbers for CBM and Carton Count.'); return; }
             if (!loadType || !locationInput) { alert('Please select a Type of Load and a Location.'); return; }
 
-            const cbm20GP = pricingData.limitations['Container Threshold CBM (20GP)'];
-            const cbm40GP = pricingData.limitations['Container Threshold CBM (40GP/HQ)'];
+            const th20GP = pricingData.limitations['Container Threshold CBM (20GP)'];
+            const th40GP = pricingData.limitations['Container Threshold CBM (40GP/HQ)']; // This is now an object {min, max}
+           
             let containerType;
-            if (cbm <= cbm20GP) containerType = '20GP';
-            else if (cbm <= cbm40GP) containerType = '40GP/HQ';
-            else containerType = '45HQ';
+            if (cbm <= th20GP) {
+                containerType = '20GP';
+            } else if (cbm >= th40GP.min && cbm <= th40GP.max) {
+                containerType = '40GP/HQ';
+            } else {
+                containerType = '45HQ';
+            }
            
             const basePricing = pricingData.locations[locationInput][containerType];
             if (!basePricing) { alert(`Error: Could not find base pricing for "${locationInput}" and container "${containerType}".`); return; }
