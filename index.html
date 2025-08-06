@@ -120,11 +120,10 @@
             if (!response.ok) throw new Error(`Google Sheets API Error: ${(await response.json()).error.message}`);
             const data = await response.json();
             const sheetValues = data.values;
-            console.log("Step 2: Data fetched successfully. Parsing data...");
+            console.log("Step 2: Data fetched. Parsing with direct, corrected ranges...");
            
             const cleanAndParse = (input, isFloat = true) => {
-                if (input === null || input === undefined) return 0;
-                const cleanedString = String(input).replace(/,/g, '').trim();
+                const cleanedString = String(input || '0').replace(/,/g, '').trim();
                 return isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
             };
 
@@ -134,27 +133,27 @@
                 includedSKUs: cleanAndParse(arr[3], false)
             });
            
-            // Direct, simple parsing using hardcoded row indices (0-indexed)
+            // Direct parsing using exact row indices (0-indexed) based on your provided ranges
             pricingData.locations = {
                 'LOS ANGELES': {
-                    '20GP': getRowData(sheetValues[2]),    // Sheet Row 3
+                    '20GP': getRowData(sheetValues[2]),    // Sheet Row 3 from A3:D5
                     '40GP/HQ': getRowData(sheetValues[3]), // Sheet Row 4
                     '45HQ': getRowData(sheetValues[4])     // Sheet Row 5
                 },
                 'SAVANNAH': {
-                    '20GP': getRowData(sheetValues[8]),    // Sheet Row 9
+                    '20GP': getRowData(sheetValues[8]),    // Sheet Row 9 from A9:D11
                     '40GP/HQ': getRowData(sheetValues[9]), // Sheet Row 10
                     '45HQ': getRowData(sheetValues[10])    // Sheet Row 11
                 },
                 'NEW YORK': {
-                    '20GP': getRowData(sheetValues[14]),   // Sheet Row 15
+                    '20GP': getRowData(sheetValues[14]),   // Sheet Row 15 from A15:D17
                     '40GP/HQ': getRowData(sheetValues[15]),// Sheet Row 16
                     '45HQ': getRowData(sheetValues[16])    // Sheet Row 17
                 }
             };
 
             pricingData.carrier = {};
-            const carrierDataRows = sheetValues.slice(20, 23); // Sheet Rows 21-23
+            const carrierDataRows = sheetValues.slice(20, 23); // Sheet Rows 21-23 from A21:G23
             carrierDataRows.forEach(row => {
                  if(row && row[0]) {
                     const locKey = String(row[0]).toUpperCase().trim();
@@ -168,16 +167,16 @@
            
             pricingData.extraCharges = {};
             pricingData.limitations = {};
-            const chargesDataRows = sheetValues.slice(2, 13);  // I3:J13
+            const chargesDataRows = sheetValues.slice(3, 13);  // Sheet Rows 4-13 from I4:J13
             chargesDataRows.forEach(row => {
                 if (row && row[8]) pricingData.extraCharges[String(row[8]).trim()] = cleanAndParse(row[9]);
             });
-            const limitsDataRows = sheetValues.slice(16, 28); // I17:J28
+            const limitsDataRows = sheetValues.slice(17, 28); // Sheet Rows 18-28 from I18:J28
             limitsDataRows.forEach(row => {
                 if (row && row[8]) {
                     const key = String(row[8]).trim();
                     const value = row[9];
-                    pricingData.limitations[key] = value === '>65' ? 65 : cleanAndParse(value);
+                    if (key) pricingData.limitations[key] = value === '>65' ? 65 : cleanAndParse(value);
                 }
             });
 
