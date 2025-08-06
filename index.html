@@ -173,7 +173,7 @@
             const sheetValues = data.values;
 
             const cleanAndParse = (input, isFloat = true) => {
-                const cleanedString = String(input || '0').replace(/,/g, '');
+                const cleanedString = String(input || '0').replace(/,/g, '').trim();
                 return isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
             };
 
@@ -182,18 +182,17 @@
                 includedCartons: cleanAndParse(arr[2], false),
                 includedSKUs: cleanAndParse(arr[3], false)
             });
-
+           
             pricingData.locations = {
                 'BELL': { '20GP': getRowData(sheetValues[3]), '40GP/HQ': getRowData(sheetValues[4]), '45HQ': getRowData(sheetValues[5]) },
                 'SAVANNAH': { '20GP': getRowData(sheetValues[9]), '40GP/HQ': getRowData(sheetValues[10]), '45HQ': getRowData(sheetValues[11]) },
-                'NEW YORK': { '20GP': getRowData(sheetValues[16]), '40GP/HQ': getRowData(sheetValues[17]), '45HQ': getRowData(sheetValues[18]) }
+                'NEW JERSEY': { '20GP': getRowData(sheetValues[16]), '40GP/HQ': getRowData(sheetValues[17]), '45HQ': getRowData(sheetValues[18]) }
             };
 
             pricingData.carrier = {};
-            // *** BUG FIX: Corrected the loop to read rows 22, 23, and 24 ***
-            for (let i = 21; i <= 23; i++) {
+            for (let i = 21; i <= 23; i++) { // Corrected loop for rows 22, 23, 24
                 if(sheetValues[i] && sheetValues[i][0]) {
-                    const locKey = sheetValues[i][0].toUpperCase();
+                    const locKey = String(sheetValues[i][0]).toUpperCase().trim();
                     pricingData.carrier[locKey] = {
                         carrier: sheetValues[i][1], drayRate: cleanAndParse(sheetValues[i][2]), chassisCost: cleanAndParse(sheetValues[i][3]),
                         standardChassisDays: cleanAndParse(sheetValues[i][4], false), freeChassisDays: cleanAndParse(sheetValues[i][5], false),
@@ -206,7 +205,7 @@
             pricingData.limitations = {};
             for(let i = 1; i < sheetValues.length; i++) {
                 if(sheetValues[i] && sheetValues[i][8]){
-                    const key = sheetValues[i][8];
+                    const key = String(sheetValues[i][8]).trim();
                     const value = sheetValues[i][9];
                     pricingData.extraCharges[key] = cleanAndParse(value);
                     if(key.toLowerCase().includes('cbm') || key.toLowerCase().includes('max') || key.toLowerCase().includes('threshold') || key.toLowerCase().includes('side')) {
@@ -244,7 +243,6 @@
         else if (cbm <= cbm40GP) containerType = '40GP/HQ';
         else containerType = '45HQ';
 
-        // Map location from dropdown (LA) to sheet key (BELL)
         let locKey = locationInput === 'LOS ANGELES' ? 'BELL' : (locationInput === 'NEW YORK' ? 'NEW JERSEY' : locationInput);
         const basePricing = pricingData.locations[locKey][containerType];
 
@@ -275,7 +273,7 @@
             const lowEndRate = commonCosts + opSurcharge;
             const highEndRate = commonCosts + whSurcharge;
             elements.palletCount.innerHTML = `<span class="range">${opPallets} - ${whPallets}</span>`;
-            elements.allInRate.innerHTML = `<span class="range">${lowEndRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} - ${highEndRate.toLocaleString('en-US', { style: 'currency', 'USD' })}</span>`;
+            elements.allInRate.innerHTML = `<span class="range">${lowEndRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} - ${highEndRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</span>`;
         } else { // Floor in/Floor out
             elements.palletCount.textContent = '-';
             elements.allInRate.textContent = commonCosts.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
