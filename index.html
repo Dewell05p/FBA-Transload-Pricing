@@ -111,7 +111,7 @@
     };
    
     async function fetchAndParseData() {
-        console.log("Step 1: Fetching data...");
+        console.log("Step 1: Fetching data from Google Sheets...");
         const sheetName = 'Admin_PricingData';
         const range = `${sheetName}!A1:J50`;
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
@@ -120,10 +120,11 @@
             if (!response.ok) throw new Error(`Google Sheets API Error: ${(await response.json()).error.message}`);
             const data = await response.json();
             const sheetValues = data.values;
-            console.log("Step 2: Data fetched. Parsing with direct ranges...");
+            console.log("Step 2: Data fetched successfully. Parsing data...");
            
             const cleanAndParse = (input, isFloat = true) => {
-                const cleanedString = String(input || '0').replace(/,/g, '').trim();
+                if (input === null || input === undefined) return 0;
+                const cleanedString = String(input).replace(/,/g, '').trim();
                 return isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
             };
 
@@ -133,7 +134,7 @@
                 includedSKUs: cleanAndParse(arr[3], false)
             });
            
-            // Direct parsing using exact row indices (0-indexed) based on your sheet
+            // Direct, simple parsing using hardcoded row indices (0-indexed)
             pricingData.locations = {
                 'LOS ANGELES': {
                     '20GP': getRowData(sheetValues[2]),    // Sheet Row 3
@@ -167,18 +168,16 @@
            
             pricingData.extraCharges = {};
             pricingData.limitations = {};
-            const chargesAndLimitsData = sheetValues.slice(1);
-            chargesAndLimitsData.forEach(row => {
+            const chargesDataRows = sheetValues.slice(2, 13);  // I3:J13
+            chargesDataRows.forEach(row => {
+                if (row && row[8]) pricingData.extraCharges[String(row[8]).trim()] = cleanAndParse(row[9]);
+            });
+            const limitsDataRows = sheetValues.slice(16, 28); // I17:J28
+            limitsDataRows.forEach(row => {
                 if (row && row[8]) {
                     const key = String(row[8]).trim();
                     const value = row[9];
-                    if (value !== null && value !== undefined && key !== "") {
-                        if (key.toLowerCase().includes('threshold') || key.toLowerCase().includes('pallet') || key.toLowerCase().includes('max')) {
-                            pricingData.limitations[key] = value === '>65' ? 65 : cleanAndParse(value);
-                        } else {
-                            pricingData.extraCharges[key] = cleanAndParse(value);
-                        }
-                    }
+                    pricingData.limitations[key] = value === '>65' ? 65 : cleanAndParse(value);
                 }
             });
 
@@ -254,7 +253,7 @@
            
             elements.resultsPane.classList.add('visible');
         } catch (error) {
-            alert("A calculation error occurred. This is often due to missing or incorrect data in the Google Sheet. Please check the Developer Console (F12) for details.");
+            alert("A calculation error occurred. The sheet data may be missing or structured incorrectly. Please check the Developer Console (F12) for details.");
             console.error("Calculation Error:", error);
         }
     }
