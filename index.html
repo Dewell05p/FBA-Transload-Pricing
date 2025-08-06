@@ -111,8 +111,8 @@
     };
    
     async function fetchAndParseData() {
+        console.log("Step 1: Starting to fetch data from Google Sheets...");
         const sheetName = 'Admin_PricingData';
-        // Read a larger range to be safe
         const range = `${sheetName}!A1:J50`;
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
         try {
@@ -120,45 +120,45 @@
             if (!response.ok) throw new Error(`Google Sheets API Error: ${(await response.json()).error.message}`);
             const data = await response.json();
             const sheetValues = data.values;
-           
-            // *** NEW ROBUST PARSING USING EXACT RANGES ***
+            console.log("Step 2: Data successfully fetched. Now parsing...");
+
             const cleanAndParse = (input, isFloat = true) => {
                 const cleanedString = String(input || '0').replace(/,/g, '').trim();
                 return isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
             };
 
             const getRowData = (arr) => ({
-                container: arr[0],
+                container: String(arr[0]).trim(),
                 basePrice: cleanAndParse(arr[1]),
                 includedCartons: cleanAndParse(arr[2], false),
                 includedSKUs: cleanAndParse(arr[3], false)
             });
-
-            // Map data directly from slices based on your provided ranges (0-indexed)
-            const laData = sheetValues.slice(2, 5).map(getRowData);     // A3:D5
-            const savannahData = sheetValues.slice(8, 11).map(getRowData); // A9:D11
-            const nyData = sheetValues.slice(14, 17).map(getRowData);     // A15:D17
            
-            // Helper to convert array of objects to object keyed by container type
+            // Direct parsing using exact row indices (0-indexed)
+            const laDataRows = sheetValues.slice(2, 5);     // Sheet rows 3-5
+            const savannahDataRows = sheetValues.slice(8, 10); // Sheet rows 9-11
+            const nyDataRows = sheetValues.slice(14, 17);     // Sheet rows 15-17
+
             const toContainerObject = (dataArray) => {
-                let obj = {};
-                dataArray.forEach(item => {
-                    if(item.container.includes('20')) obj['20GP'] = item;
-                    if(item.container.includes('40')) obj['40GP/HQ'] = item;
-                    if(item.container.includes('45')) obj['45HQ'] = item;
+                const obj = {};
+                dataArray.forEach(row => {
+                    const containerKey = String(row[0]).toUpperCase().trim();
+                    if (containerKey.includes('20GP')) obj['20GP'] = getRowData(row);
+                    if (containerKey.includes('40GP')) obj['40GP/HQ'] = getRowData(row);
+                    if (containerKey.includes('45HQ')) obj['45HQ'] = getRowData(row);
                 });
                 return obj;
             };
 
             pricingData.locations = {
-                'LOS ANGELES': toContainerObject(laData),
-                'SAVANNAH': toContainerObject(savannahData),
-                'NEW YORK': toContainerObject(nyData)
+                'LOS ANGELES': toContainerObject(laDataRows),
+                'SAVANNAH': toContainerObject(savannahDataRows),
+                'NEW YORK': toContainerObject(nyDataRows)
             };
 
             pricingData.carrier = {};
-            const carrierData = sheetValues.slice(20, 23); // A21:G23
-            carrierData.forEach(row => {
+            const carrierDataRows = sheetValues.slice(20, 23); // Sheet rows 21-23
+            carrierDataRows.forEach(row => {
                  if(row && row[0]) {
                     const locKey = String(row[0]).toUpperCase().trim();
                     pricingData.carrier[locKey] = {
@@ -171,13 +171,13 @@
            
             pricingData.extraCharges = {};
             pricingData.limitations = {};
-            const chargesData = sheetValues.slice(2, 13); // I3:J13
-            const limitsData = sheetValues.slice(16, 29);  // I17:J29 (extended one row for safety)
+            const chargesDataRows = sheetValues.slice(2, 13);  // Sheet I3:J13
+            const limitsDataRows = sheetValues.slice(16, 29); // Sheet I17:J29
 
-            chargesData.forEach(row => {
+            chargesDataRows.forEach(row => {
                 if (row && row[8]) pricingData.extraCharges[String(row[8]).trim()] = cleanAndParse(row[9]);
             });
-            limitsData.forEach(row => {
+            limitsDataRows.forEach(row => {
                 if (row && row[8]) {
                     const key = String(row[8]).trim();
                     const value = row[9];
@@ -185,18 +185,21 @@
                 }
             });
 
+            console.log("Step 3: Data parsing complete. The following data is ready:");
+            console.log(pricingData);
+
             const opCBM = pricingData.limitations['CBM per Pallet (Operations)'];
             const whCBM = pricingData.limitations['CBM per Pallet (Warehouse)'];
             elements.palletNote.innerHTML = `<strong>Note:</strong> Pallet count ranges are estimated using an Operations value of ${opCBM} CBM/pallet and a Warehouse value of ${whCBM} CBM/pallet.`;
 
         } catch (error) {
-            elements.resultsPane.style.display = 'none';
-            alert(`Error during data loading. The sheet structure may have changed. Please check the Developer Console (F12).`);
+            alert(`Error during data loading. The sheet structure may be incorrect. Please check the Developer Console (F12).`);
             console.error(error);
         }
     }
 
     function calculateEstimate() {
+        console.log("Step 4: 'Calculate' clicked. Starting estimation...");
         try {
             const cbm = parseFloat(elements.cbm.value);
             const cartonCount = parseInt(elements.cartonCount.value);
@@ -214,9 +217,10 @@
             if (cbm <= cbm20GP) containerType = '20GP';
             else if (cbm <= cbm40GP) containerType = '40GP/HQ';
             else containerType = '45HQ';
+            console.log(`Container type determined: ${containerType}`);
            
             const basePricing = pricingData.locations[locationInput][containerType];
-            if (!basePricing) { alert(`Error: Could not find base pricing for "${locationInput}".`); return; }
+            if (!basePricing) { alert(`Error: Could not find base pricing for "${locationInput}" and container "${containerType}".`); return; }
 
             if (isNaN(skuCount) || skuCount <= 0) { skuCount = basePricing.includedSKUs; }
            
@@ -235,6 +239,7 @@
             const storageFee = (storage === 'Yes') ? (cbm * (pricingData.extraCharges['Storage CBM/Day (All)'] || 0)) : 0;
             const commonCosts = basePricing.basePrice + cartonSurcharge + skuSurcharge + totalCarrierCost + storageFee;
            
+            console.log("Step 5: All costs calculated. Displaying results.");
             elements.containerType.textContent = containerType;
 
             if (loadType === 'Palletized') {
@@ -289,6 +294,22 @@
 
         elements.calculateBtn.addEventListener('click', calculateEstimate);
         elements.clearBtn.addEventListener('click', clearForm);
+
+        // 'Enter' key navigation
+        const inputs = [elements.cbm, elements.cartonCount, elements.skuCount, elements.loadType, elements.location, elements.storage];
+        inputs.forEach((input, index) => {
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    const nextInput = inputs[index + 1];
+                    if (nextInput) {
+                        nextInput.focus();
+                    } else {
+                        elements.calculateBtn.focus();
+                    }
+                }
+            });
+        });
     }
    
     initialize();
