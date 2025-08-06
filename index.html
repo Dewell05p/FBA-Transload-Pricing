@@ -119,18 +119,17 @@
             if (!response.ok) throw new Error(`Google Sheets API Error: ${(await response.json()).error.message}`);
             const data = await response.json();
             const sheetValues = data.values;
-
-            // *** DIAGNOSTIC STEP: Log the raw data to the console ***
-            console.log("--- RAW GOOGLE SHEET DATA (First 25 Rows) ---");
-            console.table(sheetValues.slice(0, 25));
-            // **********************************************************
            
+            // *** NEW ROBUST PARSING LOGIC ***
             const cleanAndParse = (input, isFloat = true) => {
                 const cleanedString = String(input || '0').replace(/,/g, '').trim();
                 return isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
             };
 
-            const findHeaderRow = (textToFind, colIndex = 0) => sheetValues.findIndex(row => row && row[colIndex] && row[colIndex].trim().toUpperCase().includes(textToFind.toUpperCase()));
+            // Searches the ENTIRE ROW for the header text, making it immune to merged cell issues.
+            const findHeaderRow = (textToFind) => sheetValues.findIndex(row =>
+                row && row.some(cell => cell && typeof cell === 'string' && cell.trim().toUpperCase().includes(textToFind.toUpperCase()))
+            );
 
             const getRowData = (arr) => ({
                 basePrice: cleanAndParse(arr[1]),
@@ -138,6 +137,7 @@
                 includedSKUs: cleanAndParse(arr[3], false)
             });
 
+            // Dynamically find table start rows
             const bellStart = findHeaderRow('BELL PRICING') + 2;
             const savannahStart = findHeaderRow('SAVANNAH PRICING') + 2;
             const njStart = findHeaderRow('NEW JERSEY PRICING') + 2;
@@ -163,15 +163,14 @@
            
             pricingData.extraCharges = {};
             pricingData.limitations = {};
-            const chargesHeaderRow = findHeaderRow('Description', 8) + 1; // Find 'Description' in Column I (index 8)
-            for(let i = chargesHeaderRow; i < sheetValues.length; i++) {
+            for(let i = 1; i < sheetValues.length; i++) {
                 if(sheetValues[i] && sheetValues[i][8]){
                     const key = String(sheetValues[i][8]).trim();
                     const value = sheetValues[i][9];
                     if (value !== null && value !== undefined) {
                         if(key.toLowerCase().includes('cbm') || key.toLowerCase().includes('max') || key.toLowerCase().includes('threshold') || key.toLowerCase().includes('side')) {
                             pricingData.limitations[key] = value === '>65' ? 65 : cleanAndParse(value);
-                        } else if (key) { // Ensure key is not empty
+                        } else if (key) {
                            pricingData.extraCharges[key] = cleanAndParse(value);
                         }
                     }
@@ -191,7 +190,6 @@
 
     function calculateEstimate() {
         try {
-            // Calculation logic remains the same
             const cbm = parseFloat(elements.cbm.value);
             const cartonCount = parseInt(elements.cartonCount.value);
             let skuCount = parseInt(elements.skuCount.value);
@@ -214,10 +212,11 @@
             if (!locKey || !pricingData.locations[locKey]) { alert(`Error: Could not find base pricing for "${locationInput}". Check if the pricing table headers are correct in the sheet.`); return; }
            
             const basePricing = pricingData.locations[locKey][containerType];
+            if (!basePricing) { alert(`Error: Could not find pricing for container type ${containerType}.`); return; }
 
             if (isNaN(skuCount) || skuCount <= 0) { skuCount = basePricing.includedSKUs; }
            
-            const cartonSurchargeKey = 'Carton Surcharge (Floor in/Floor out)';
+            const cartonSurchargeKey = loadType === 'Palletized' ? 'Carton Surcharge (Floor in/Pallet out)' : 'Carton Surcharge (Floor in/Floor out)';
             const skuSurchargeKey = 'Sort Surcharge (Floor in/Pallet out)';
 
             let cartonSurcharge = (cartonCount > basePricing.includedCartons) ? (cartonCount - basePricing.includedCartons) * (pricingData.extraCharges[cartonSurchargeKey] || 0) : 0;
