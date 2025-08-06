@@ -112,6 +112,7 @@
    
     async function fetchAndParseData() {
         const sheetName = 'Admin_PricingData';
+        // Read a larger range to be safe
         const range = `${sheetName}!A1:J50`;
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
         try {
@@ -120,60 +121,69 @@
             const data = await response.json();
             const sheetValues = data.values;
            
+            // *** NEW ROBUST PARSING USING EXACT RANGES ***
             const cleanAndParse = (input, isFloat = true) => {
                 const cleanedString = String(input || '0').replace(/,/g, '').trim();
                 return isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
             };
 
-            const findHeaderRow = (textToFind) => sheetValues.findIndex(row =>
-                row && row.some(cell => cell && typeof cell === 'string' && cell.trim().toUpperCase().includes(textToFind.toUpperCase()))
-            );
-
             const getRowData = (arr) => ({
+                container: arr[0],
                 basePrice: cleanAndParse(arr[1]),
                 includedCartons: cleanAndParse(arr[2], false),
                 includedSKUs: cleanAndParse(arr[3], false)
             });
 
-            // Dynamically find table start rows
-            const laStart = findHeaderRow('LOS ANGELES PRICING') + 2;
-            const savannahStart = findHeaderRow('SAVANNAH PRICING') + 2;
-            const nyStart = findHeaderRow('NEW YORK PRICING') + 2; // Corrected from (Oversize)
-            const carrierStart = findHeaderRow('CARRIER PRICING') + 2;
+            // Map data directly from slices based on your provided ranges (0-indexed)
+            const laData = sheetValues.slice(2, 5).map(getRowData);     // A3:D5
+            const savannahData = sheetValues.slice(8, 11).map(getRowData); // A9:D11
+            const nyData = sheetValues.slice(14, 17).map(getRowData);     // A15:D17
            
+            // Helper to convert array of objects to object keyed by container type
+            const toContainerObject = (dataArray) => {
+                let obj = {};
+                dataArray.forEach(item => {
+                    if(item.container.includes('20')) obj['20GP'] = item;
+                    if(item.container.includes('40')) obj['40GP/HQ'] = item;
+                    if(item.container.includes('45')) obj['45HQ'] = item;
+                });
+                return obj;
+            };
+
             pricingData.locations = {
-                'LOS ANGELES': { '20GP': getRowData(sheetValues[laStart]), '40GP/HQ': getRowData(sheetValues[laStart + 1]), '45HQ': getRowData(sheetValues[laStart + 2]) },
-                'SAVANNAH': { '20GP': getRowData(sheetValues[savannahStart]), '40GP/HQ': getRowData(sheetValues[savannahStart + 1]), '45HQ': getRowData(sheetValues[savannahStart + 2]) },
-                'NEW YORK': { '20GP': getRowData(sheetValues[nyStart]), '40GP/HQ': getRowData(sheetValues[nyStart + 1]), '45HQ': getRowData(sheetValues[nyStart + 2]) }
+                'LOS ANGELES': toContainerObject(laData),
+                'SAVANNAH': toContainerObject(savannahData),
+                'NEW YORK': toContainerObject(nyData)
             };
 
             pricingData.carrier = {};
-            for (let i = carrierStart; i < carrierStart + 3; i++) {
-                if(sheetValues[i] && sheetValues[i][0]) {
-                    const locKey = String(sheetValues[i][0]).toUpperCase().trim();
+            const carrierData = sheetValues.slice(20, 23); // A21:G23
+            carrierData.forEach(row => {
+                 if(row && row[0]) {
+                    const locKey = String(row[0]).toUpperCase().trim();
                     pricingData.carrier[locKey] = {
-                        carrier: sheetValues[i][1], drayRate: cleanAndParse(sheetValues[i][2]), chassisCost: cleanAndParse(sheetValues[i][3]),
-                        standardChassisDays: cleanAndParse(sheetValues[i][4], false), freeChassisDays: cleanAndParse(sheetValues[i][5], false),
-                        csrCommission: cleanAndParse(sheetValues[i][6])
+                        carrier: row[1], drayRate: cleanAndParse(row[2]), chassisCost: cleanAndParse(row[3]),
+                        standardChassisDays: cleanAndParse(row[4], false), freeChassisDays: cleanAndParse(row[5], false),
+                        csrCommission: cleanAndParse(row[6])
                     };
                 }
-            }
+            });
            
             pricingData.extraCharges = {};
             pricingData.limitations = {};
-            for(let i = 1; i < sheetValues.length; i++) {
-                if(sheetValues[i] && sheetValues[i][8]){
-                    const key = String(sheetValues[i][8]).trim();
-                    const value = sheetValues[i][9];
-                    if (value !== null && value !== undefined && key !== "") {
-                        if(key.toLowerCase().includes('cbm') || key.toLowerCase().includes('max') || key.toLowerCase().includes('threshold') || key.toLowerCase().includes('side')) {
-                            pricingData.limitations[key] = value === '>65' ? 65 : cleanAndParse(value);
-                        } else {
-                           pricingData.extraCharges[key] = cleanAndParse(value);
-                        }
-                    }
+            const chargesData = sheetValues.slice(2, 13); // I3:J13
+            const limitsData = sheetValues.slice(16, 29);  // I17:J29 (extended one row for safety)
+
+            chargesData.forEach(row => {
+                if (row && row[8]) pricingData.extraCharges[String(row[8]).trim()] = cleanAndParse(row[9]);
+            });
+            limitsData.forEach(row => {
+                if (row && row[8]) {
+                    const key = String(row[8]).trim();
+                    const value = row[9];
+                    pricingData.limitations[key] = value === '>65' ? 65 : cleanAndParse(value);
                 }
-            }
+            });
 
             const opCBM = pricingData.limitations['CBM per Pallet (Operations)'];
             const whCBM = pricingData.limitations['CBM per Pallet (Warehouse)'];
@@ -206,7 +216,7 @@
             else containerType = '45HQ';
            
             const basePricing = pricingData.locations[locationInput][containerType];
-            if (!basePricing) { alert(`Error: Could not find base pricing for "${locationInput}". Check that the pricing table header matches the location name.`); return; }
+            if (!basePricing) { alert(`Error: Could not find base pricing for "${locationInput}".`); return; }
 
             if (isNaN(skuCount) || skuCount <= 0) { skuCount = basePricing.includedSKUs; }
            
@@ -279,22 +289,6 @@
 
         elements.calculateBtn.addEventListener('click', calculateEstimate);
         elements.clearBtn.addEventListener('click', clearForm);
-
-        // 'Enter' key navigation
-        const inputs = [elements.cbm, elements.cartonCount, elements.skuCount];
-        inputs.forEach((input, index) => {
-            input.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    const nextInput = inputs[index + 1];
-                    if (nextInput) {
-                        nextInput.focus();
-                    } else {
-                        elements.loadType.focus();
-                    }
-                }
-            });
-        });
     }
    
     initialize();
