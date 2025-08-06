@@ -111,7 +111,7 @@
     };
    
     async function fetchAndParseData() {
-        console.log("Step 1: Fetching data...");
+        console.log("Step 1: Fetching data from Google Sheets...");
         const sheetName = 'Admin_PricingData';
         const range = `${sheetName}!A1:J50`;
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
@@ -120,8 +120,10 @@
             if (!response.ok) throw new Error(`Google Sheets API Error: ${(await response.json()).error.message}`);
             const data = await response.json();
             const sheetValues = data.values;
-            console.log("Step 2: Data fetched. Parsing with direct ranges...");
+            console.log("Step 2: Data fetched. Parsing with direct, simple ranges...");
            
+            pricingData = {}; // Reset data object
+
             const cleanAndParse = (input, isFloat = true) => {
                 if (input === null || input === undefined) return 0;
                 const cleanedString = String(input).replace(/,/g, '').trim();
@@ -135,63 +137,59 @@
                 includedSKUs: cleanAndParse(arr[3], false)
             });
            
-            pricingData.locations = {
-                'LOS ANGELES': {
-                    '20GP': getRowData(sheetValues[2]), '40GP/HQ': getRowData(sheetValues[3]), '45HQ': getRowData(sheetValues[4])
-                },
-                'SAVANNAH': {
-                    '20GP': getRowData(sheetValues[8]), '40GP/HQ': getRowData(sheetValues[9]), '45HQ': getRowData(sheetValues[10])
-                },
-                'NEW YORK': {
-                    '20GP': getRowData(sheetValues[14]), '40GP/HQ': getRowData(sheetValues[15]), '45HQ': getRowData(sheetValues[16])
-                }
-            };
+            // --- PARSE LOCATIONS ---
+            try {
+                pricingData.locations = {
+                    'LOS ANGELES': {'20GP': getRowData(sheetValues[2]),'40GP/HQ': getRowData(sheetValues[3]),'45HQ': getRowData(sheetValues[4])},
+                    'SAVANNAH': {'20GP': getRowData(sheetValues[8]),'40GP/HQ': getRowData(sheetValues[9]),'45HQ': getRowData(sheetValues[10])},
+                    'NEW YORK': {'20GP': getRowData(sheetValues[14]),'40GP/HQ': getRowData(sheetValues[15]),'45HQ': getRowData(sheetValues[16])}
+                };
+            } catch (e) { throw new Error("Failed to parse Location pricing tables. Check rows 3-17 and ensure they have data."); }
 
-            pricingData.carrier = {};
-            const carrierDataRows = sheetValues.slice(20, 23);
-            carrierDataRows.forEach(row => {
-                 if(row && row[0]) {
-                    const locKey = String(row[0]).toUpperCase().trim();
-                    pricingData.carrier[locKey] = {
-                        carrier: row[1], drayRate: cleanAndParse(row[2]), chassisCost: cleanAndParse(row[3]),
-                        standardChassisDays: cleanAndParse(row[4], false), freeChassisDays: cleanAndParse(row[5], false),
-                        csrCommission: cleanAndParse(row[6])
-                    };
-                }
-            });
-           
-            pricingData.extraCharges = {};
-            pricingData.limitations = {};
-            const chargesDataRows = sheetValues.slice(2, 13);
-            chargesDataRows.forEach(row => {
-                if (row && row[8]) pricingData.extraCharges[String(row[8]).trim()] = cleanAndParse(row[9]);
-            });
-
-            const limitsDataRows = sheetValues.slice(17, 28);
-            limitsDataRows.forEach(row => {
-                if (row && row[8]) {
-                    const key = String(row[8]).trim();
-                    const value = String(row[9] || '').trim();
-                    if (key === 'Container Threshold CBM (40GP/HQ)') {
-                        const parts = value.split('-');
-                        pricingData.limitations[key] = {
-                            min: cleanAndParse(parts[0]),
-                            max: cleanAndParse(parts[1])
+            // --- PARSE CARRIER ---
+            try {
+                pricingData.carrier = {};
+                const carrierDataRows = sheetValues.slice(20, 23); // Rows 21-23
+                carrierDataRows.forEach(row => {
+                     if(row && row[0]) {
+                        const locKey = String(row[0]).toUpperCase().trim();
+                        pricingData.carrier[locKey] = {
+                            carrier: row[1], drayRate: cleanAndParse(row[2]), chassisCost: cleanAndParse(row[3]),
+                            standardChassisDays: cleanAndParse(row[4], false), freeChassisDays: cleanAndParse(row[5], false),
+                            csrCommission: cleanAndParse(row[6])
                         };
-                    } else {
-                        pricingData.limitations[key] = value.includes('>') ? cleanAndParse(value.replace('>', '')) : cleanAndParse(value);
                     }
-                }
-            });
+                });
+            } catch (e) { throw new Error("Failed to parse Carrier pricing table. Check rows 21-23."); }
+           
+            // --- PARSE CHARGES & VALUES ---
+            try {
+                pricingData.charges = {};
+                pricingData.values = {};
+                const chargesDataRows = sheetValues.slice(2, 13);  // Rows 3-13
+                chargesDataRows.forEach(row => {
+                    if (row && row[8]) pricingData.charges[String(row[8]).trim()] = cleanAndParse(row[9]);
+                });
+                const limitsDataRows = sheetValues.slice(16, 28); // Rows 17-28
+                limitsDataRows.forEach(row => {
+                    if (row && row[8]) {
+                        const key = String(row[8]).trim();
+                        const value = String(row[9] || '').trim();
+                        if (key.includes('40GP/HQ')) {
+                            pricingData.values[key] = { min: cleanAndParse(value.split('-')[0]), max: cleanAndParse(value.split('-')[1]) };
+                        } else {
+                            pricingData.values[key] = value.includes('>') ? cleanAndParse(value.replace('>', '')) : cleanAndParse(value);
+                        }
+                    }
+                });
+            } catch (e) { throw new Error("Failed to parse Charges/Values tables. Check columns I & J."); }
 
             console.log("Step 3: Data parsing complete.", pricingData);
 
-            const opCBM = pricingData.limitations['CBM per Pallet (Operations)'];
-            const whCBM = pricingData.limitations['CBM per Pallet (Warehouse)'];
-            elements.palletNote.innerHTML = `<strong>Note:</strong> Pallet count ranges are estimated using an Operations value of ${opCBM} and Warehouse value of ${whCBM} CBM/pallet.`;
+            elements.palletNote.innerHTML = `<strong>Note:</strong> Pallet count ranges are estimated using an Operations value of ${pricingData.values['CBM per Pallet (Operations)']} and Warehouse value of ${pricingData.values['CBM per Pallet (Warehouse)']} CBM/pallet.`;
 
         } catch (error) {
-            alert(`Error during data loading. The sheet structure may be incorrect. Please check the Developer Console (F12).`);
+            alert(`Error during data loading: ${error.message} Please check the Developer Console (F12).`);
             console.error("Data Loading Error:", error);
         }
     }
@@ -208,8 +206,8 @@
             if (isNaN(cbm) || cbm <= 0 || isNaN(cartonCount) || cartonCount <= 0) { alert('Please enter valid numbers for CBM and Carton Count.'); return; }
             if (!loadType || !locationInput) { alert('Please select a Type of Load and a Location.'); return; }
 
-            const th20GP = pricingData.limitations['Container Threshold CBM (20GP)'];
-            const th40GP = pricingData.limitations['Container Threshold CBM (40GP/HQ)']; // This is now an object {min, max}
+            const th20GP = pricingData.values['Container Threshold CBM (20GP)'];
+            const th40GP = pricingData.values['Container Threshold CBM (40GP/HQ)'];
            
             let containerType;
             if (cbm <= th20GP) {
@@ -228,8 +226,8 @@
             const cartonSurchargeKey = loadType === 'Palletized' ? 'Carton Surcharge (Floor in/Pallet out)' : 'Carton Surcharge (Floor in/Floor out)';
             const skuSurchargeKey = 'Sort Surcharge (Floor in/Pallet out)';
 
-            let cartonSurcharge = (cartonCount > basePricing.includedCartons) ? (cartonCount - basePricing.includedCartons) * (pricingData.extraCharges[cartonSurchargeKey] || 0) : 0;
-            let skuSurcharge = (skuCount > basePricing.includedSKUs) ? (skuCount - basePricing.includedSKUs) * (pricingData.extraCharges[skuSurchargeKey] || 0) : 0;
+            let cartonSurcharge = (cartonCount > basePricing.includedCartons) ? (cartonCount - basePricing.includedCartons) * (pricingData.charges[cartonSurchargeKey] || 0) : 0;
+            let skuSurcharge = (skuCount > basePricing.includedSKUs) ? (skuCount - basePricing.includedSKUs) * (pricingData.charges[skuSurchargeKey] || 0) : 0;
            
             const carrierCosts = pricingData.carrier[locationInput];
             if (!carrierCosts) { alert(`Error: Could not find carrier pricing for "${locationInput}".`); return; }
@@ -237,17 +235,17 @@
             let actualChassisCost = (carrierCosts.standardChassisDays > carrierCosts.freeChassisDays) ? carrierCosts.chassisCost : 0;
             const totalCarrierCost = carrierCosts.drayRate + actualChassisCost + carrierCosts.csrCommission;
            
-            const storageFee = (storage === 'Yes') ? (cbm * (pricingData.extraCharges['Storage CBM/Day (All)'] || 0)) : 0;
+            const storageFee = (storage === 'Yes') ? (cbm * (pricingData.charges['Storage CBM/Day (All)'] || 0)) : 0;
             const commonCosts = basePricing.basePrice + cartonSurcharge + skuSurcharge + totalCarrierCost + storageFee;
            
             elements.containerType.textContent = containerType;
 
             if (loadType === 'Palletized') {
-                const opCBM = pricingData.limitations['CBM per Pallet (Operations)'];
-                const whCBM = pricingData.limitations['CBM per Pallet (Warehouse)'];
+                const opCBM = pricingData.values['CBM per Pallet (Operations)'];
+                const whCBM = pricingData.values['CBM per Pallet (Warehouse)'];
                 const opPallets = Math.ceil(cbm / opCBM);
                 const whPallets = Math.ceil(cbm / whCBM);
-                const outboundSurchargeRate = pricingData.extraCharges['Outbound Pallet Surcharge (Floor in/Pallet out)'] || 0;
+                const outboundSurchargeRate = pricingData.charges['Outbound Pallet Surcharge (Floor in/Pallet out)'] || 0;
                 const opSurcharge = opPallets * outboundSurchargeRate;
                 const whSurcharge = whPallets * outboundSurchargeRate;
                 const lowEndRate = commonCosts + opSurcharge;
