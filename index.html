@@ -8,7 +8,6 @@
     <title>FBA Shipment Cost Estimator</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <style>
-        /* Custom styles to enhance Tailwind */
         #resultsPane {
             transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
             opacity: 0;
@@ -18,7 +17,7 @@
             opacity: 1;
             transform: translateY(0);
         }
-        .result-item p.range { font-size: 1.25rem; } /* Smaller font for ranges */
+        .result-item p.range { font-size: 1.25rem; }
     </style>
 </head>
 <body>
@@ -34,32 +33,20 @@
             </header>
 
             <div id="welcomePage" class="px-10 md:px-40 flex flex-1 justify-center py-5">
-                <div class="layout-content-container flex flex-col w-full max-w-[960px] flex-1">
+                 <div class="layout-content-container flex flex-col w-full max-w-[960px] flex-1">
                     <div class="text-center">
                         <h1 class="text-4xl font-bold text-[#004d99]">FBA Shipment Cost Estimator</h1>
                         <p class="text-lg text-slate-600 mt-2">(Excludes Last Mile Rates)</p>
                     </div>
-
                     <div class="instructions text-left my-10">
                         <h3 class="text-xl font-bold text-[#004d99] border-b-2 border-[#0d80f2] pb-2 mb-4">Key Amazon FBA Shipment Guidelines</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-                            <div class="bg-white p-4 rounded-lg border border-slate-200">
-                                <p class="text-[#0d141c] text-base font-medium leading-normal">Carton Limits</p>
-                                <p class="text-slate-500 text-sm mt-1">Individual cartons must not exceed 25 inches on any side or weigh more than 50 pounds.</p>
-                            </div>
-                            <div class="bg-white p-4 rounded-lg border border-slate-200">
-                                <p class="text-[#0d141c] text-base font-medium leading-normal">Pallet Dimensions</p>
-                                <p class="text-slate-500 text-sm mt-1">Use 40" x 48" pallets, not to exceed 72" in height or 1,500 lbs in weight.</p>
-                            </div>
-                            <div class="bg-white p-4 rounded-lg border border-slate-200">
-                                <p class="text-[#0d141c] text-base font-medium leading-normal">Oversized Products</p>
-                                <p class="text-slate-500 text-sm mt-1">A single item is oversized if it is over 20 lbs or has any side longer than 18 inches.</p>
-                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-slate-200"><p class="text-[#0d141c] text-base font-medium">Carton Limits</p><p class="text-slate-500 text-sm mt-1">Cartons must not exceed 25 inches on any side or weigh more than 50 pounds.</p></div>
+                            <div class="bg-white p-4 rounded-lg border border-slate-200"><p class="text-[#0d141c] text-base font-medium">Pallet Dimensions</p><p class="text-slate-500 text-sm mt-1">Use 40" x 48" pallets, not to exceed 72" in height or 1,500 lbs in weight.</p></div>
+                            <div class="bg-white p-4 rounded-lg border border-slate-200"><p class="text-[#0d141c] text-base font-medium">Oversized Products</p><p class="text-slate-500 text-sm mt-1">An item is oversized if it is over 20 lbs or has any side longer than 18 inches.</p></div>
                         </div>
                     </div>
-                    <div class="text-center">
-                         <button id="startBtn" class="flex mx-auto min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#0d80f2] text-slate-50 text-base font-bold"><span class="truncate">Start Estimating</span></button>
-                    </div>
+                    <div class="text-center"><button id="startBtn" class="flex mx-auto min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#0d80f2] text-slate-50 text-base font-bold"><span class="truncate">Start Estimating</span></button></div>
                 </div>
             </div>
            
@@ -67,42 +54,12 @@
                  <div class="layout-content-container flex flex-col w-full max-w-[960px] flex-1">
                     <h2 class="text-2xl font-bold text-center">Estimate Costs</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 text-left">
-                        <div class="form-group">
-                            <label for="cbm" class="block text-sm font-medium text-gray-700">CBM (m³)</label>
-                            <input type="number" id="cbm" placeholder="e.g., 53" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        </div>
-                        <div class="form-group">
-                            <label for="cartonCount" class="block text-sm font-medium text-gray-700">Carton Count</label>
-                            <input type="number" id="cartonCount" placeholder="e.g., 1200" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        </div>
-                        <div class="form-group">
-                            <label for="skuCount" class="block text-sm font-medium text-gray-700">SKU Count</label>
-                            <input type="number" id="skuCount" placeholder="Optional" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        </div>
-                         <div class="form-group">
-                             <label for="loadType" class="block text-sm font-medium text-gray-700">Type of Load</label>
-                             <select id="loadType" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                <option value="" disabled selected>Select...</option>
-                                <option value="Floor in/Floor out">Floor in/Floor out</option>
-                                <option value="Palletized">Palletized</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
-                            <select id="location" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                 <option value="" disabled selected>Select...</option>
-                                <option value="LOS ANGELES">LOS ANGELES</option>
-                                <option value="SAVANNAH">SAVANNAH</option>
-                                <option value="NEW YORK">NEW YORK</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="storage" class="block text-sm font-medium text-gray-700">Storage Required?</label>
-                            <select id="storage" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                <option value="No" selected>No</option>
-                                <option value="Yes">Yes</option>
-                            </select>
-                        </div>
+                        <div class="form-group"><label for="cbm" class="block text-sm font-medium text-gray-700">CBM (m³)</label><input type="number" id="cbm" placeholder="e.g., 53" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
+                        <div class="form-group"><label for="cartonCount" class="block text-sm font-medium text-gray-700">Carton Count</label><input type="number" id="cartonCount" placeholder="e.g., 1200" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
+                        <div class="form-group"><label for="skuCount" class="block text-sm font-medium text-gray-700">SKU Count</label><input type="number" id="skuCount" placeholder="Optional" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
+                        <div class="form-group"><label for="loadType" class="block text-sm font-medium text-gray-700">Type of Load</label><select id="loadType" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"><option value="" disabled selected>Select...</option><option value="Floor in/Floor out">Floor in/Floor out</option><option value="Palletized">Palletized</option></select></div>
+                        <div class="form-group"><label for="location" class="block text-sm font-medium text-gray-700">Location</label><select id="location" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"><option value="" disabled selected>Select...</option><option value="LOS ANGELES">LOS ANGELES</option><option value="SAVANNAH">SAVANNAH</option><option value="NEW YORK">NEW YORK</option></select></div>
+                        <div class="form-group"><label for="storage" class="block text-sm font-medium text-gray-700">Storage Required?</label><select id="storage" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"><option value="No" selected>No</option><option value="Yes">Yes</option></select></div>
                     </div>
                     <div class="flex gap-4 mt-8">
                         <button id="calculateBtn" class="flex-1 flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#0d80f2] text-slate-50 text-base font-bold"><span class="truncate">Calculate Estimates</span></button>
@@ -111,18 +68,9 @@
                    
                     <div id="resultsPane" class="mt-10 p-6 bg-blue-50 border border-blue-200 rounded-lg">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                            <div class="md:col-span-3">
-                                <h4 class="text-sm font-medium text-slate-500">Container Type</h4>
-                                <p id="containerType" class="text-2xl font-bold text-[#0d80f2] mt-1">-</p>
-                            </div>
-                            <div class="result-item">
-                                <h4 class="text-sm font-medium text-slate-500">Pallet Count</h4>
-                                <p id="palletCount" class="text-2xl font-bold text-[#0d80f2] mt-1">-</p>
-                            </div>
-                            <div class="result-item md:col-span-2">
-                                <h4 class="text-sm font-medium text-slate-500">All-in Rate</h4>
-                                <p id="allInRate" class="text-2xl font-bold text-green-600 mt-1">$0.00</p>
-                            </div>
+                            <div class="md:col-span-3"><h4 class="text-sm font-medium text-slate-500">Container Type</h4><p id="containerType" class="text-2xl font-bold text-[#0d80f2] mt-1">-</p></div>
+                            <div class="result-item"><h4 class="text-sm font-medium text-slate-500">Pallet Count</h4><p id="palletCount" class="text-2xl font-bold text-[#0d80f2] mt-1">-</p></div>
+                            <div class="result-item md:col-span-2"><h4 class="text-sm font-medium text-slate-500">All-in Rate</h4><p id="allInRate" class="text-2xl font-bold text-green-600 mt-1">$0.00</p></div>
                         </div>
                     </div>
 
@@ -171,26 +119,35 @@
             if (!response.ok) throw new Error(`Google Sheets API Error: ${(await response.json()).error.message}`);
             const data = await response.json();
             const sheetValues = data.values;
-
+           
+            // *** NEW INTELLIGENT PARSING LOGIC ***
             const cleanAndParse = (input, isFloat = true) => {
                 const cleanedString = String(input || '0').replace(/,/g, '').trim();
                 return isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
             };
 
+            const findHeaderRow = (text) => sheetValues.findIndex(row => row && row[0] && row[0].trim() === text);
+           
             const getRowData = (arr) => ({
                 basePrice: cleanAndParse(arr[1]),
                 includedCartons: cleanAndParse(arr[2], false),
                 includedSKUs: cleanAndParse(arr[3], false)
             });
+
+            // Dynamically find table start rows
+            const bellStart = findHeaderRow('BELL PRICING') + 2;
+            const savannahStart = findHeaderRow('SAVANNAH PRICING') + 2;
+            const njStart = findHeaderRow('NEW JERSEY PRICING') + 2;
+            const carrierStart = findHeaderRow('CARRIER PRICING (TO WAREHOUSE)') + 2;
            
             pricingData.locations = {
-                'BELL': { '20GP': getRowData(sheetValues[3]), '40GP/HQ': getRowData(sheetValues[4]), '45HQ': getRowData(sheetValues[5]) },
-                'SAVANNAH': { '20GP': getRowData(sheetValues[9]), '40GP/HQ': getRowData(sheetValues[10]), '45HQ': getRowData(sheetValues[11]) },
-                'NEW JERSEY': { '20GP': getRowData(sheetValues[16]), '40GP/HQ': getRowData(sheetValues[17]), '45HQ': getRowData(sheetValues[18]) }
+                'BELL': { '20GP': getRowData(sheetValues[bellStart]), '40GP/HQ': getRowData(sheetValues[bellStart + 1]), '45HQ': getRowData(sheetValues[bellStart + 2]) },
+                'SAVANNAH': { '20GP': getRowData(sheetValues[savannahStart]), '40GP/HQ': getRowData(sheetValues[savannahStart + 1]), '45HQ': getRowData(sheetValues[savannahStart + 2]) },
+                'NEW JERSEY': { '20GP': getRowData(sheetValues[njStart]), '40GP/HQ': getRowData(sheetValues[njStart + 1]), '45HQ': getRowData(sheetValues[njStart + 2]) }
             };
 
             pricingData.carrier = {};
-            for (let i = 21; i <= 23; i++) { // Corrected loop for rows 22, 23, 24
+            for (let i = carrierStart; i < carrierStart + 3; i++) { // Read 3 rows of carrier data
                 if(sheetValues[i] && sheetValues[i][0]) {
                     const locKey = String(sheetValues[i][0]).toUpperCase().trim();
                     pricingData.carrier[locKey] = {
@@ -208,9 +165,10 @@
                     const key = String(sheetValues[i][8]).trim();
                     const value = sheetValues[i][9];
                     if (value !== null && value !== undefined) {
-                        pricingData.extraCharges[key] = cleanAndParse(value);
                         if(key.toLowerCase().includes('cbm') || key.toLowerCase().includes('max') || key.toLowerCase().includes('threshold') || key.toLowerCase().includes('side')) {
                             pricingData.limitations[key] = value === '>65' ? 65 : cleanAndParse(value);
+                        } else {
+                           pricingData.extraCharges[key] = cleanAndParse(value);
                         }
                     }
                 }
@@ -222,7 +180,7 @@
 
         } catch (error) {
             elements.resultsPane.style.display = 'none';
-            alert(`Error loading data. Please check the Developer Console (F12) for more details.`);
+            alert(`Error during data loading. Please check the Developer Console (F12) for more details.`);
             console.error(error);
         }
     }
@@ -246,20 +204,19 @@
             else if (cbm <= cbm40GP) containerType = '40GP/HQ';
             else containerType = '45HQ';
 
-            const locationMap = {
-                'LOS ANGELES': 'BELL',
-                'SAVANNAH': 'SAVANNAH',
-                'NEW YORK': 'NEW JERSEY'
-            };
+            const locationMap = {'LOS ANGELES': 'BELL', 'SAVANNAH': 'SAVANNAH', 'NEW YORK': 'NEW JERSEY'};
             const locKey = locationMap[locationInput];
             if (!locKey || !pricingData.locations[locKey]) { alert(`Error: Could not find base pricing for "${locationInput}".`); return; }
            
             const basePricing = pricingData.locations[locKey][containerType];
 
             if (isNaN(skuCount) || skuCount <= 0) { skuCount = basePricing.includedSKUs; }
+           
+            const cartonSurchargeKey = loadType === 'Palletized' ? 'Carton Surcharge (Floor in/Pallet out)' : 'Carton Surcharge (Floor in/Floor out)';
+            const skuSurchargeKey = 'Sort Surcharge (Floor in/Pallet out)'; // Assuming one key for both for now
 
-            let cartonSurcharge = (cartonCount > basePricing.includedCartons) ? (cartonCount - basePricing.includedCartons) * (pricingData.extraCharges['Carton Surcharge (Floor in/Floor out)'] || 0) : 0;
-            let skuSurcharge = (skuCount > basePricing.includedSKUs) ? (skuCount - basePricing.includedSKUs) * (pricingData.extraCharges['Sort Surcharge (Floor in/Floor out)'] || 0) : 0;
+            let cartonSurcharge = (cartonCount > basePricing.includedCartons) ? (cartonCount - basePricing.includedCartons) * (pricingData.extraCharges[cartonSurchargeKey] || 0) : 0;
+            let skuSurcharge = (skuCount > basePricing.includedSKUs) ? (skuCount - basePricing.includedSKUs) * (pricingData.extraCharges[skuSurchargeKey] || 0) : 0;
            
             const carrierCosts = pricingData.carrier[locationInput];
             if (!carrierCosts) { alert(`Error: Could not find carrier pricing for "${locationInput}".`); return; }
@@ -319,27 +276,11 @@
         elements.startBtn.addEventListener('click', () => {
             elements.welcomePage.style.display = 'none';
             elements.calculatorPage.style.display = 'flex';
-            elements.resultsPane.style.display = 'none'; // Hide results until calculation
+            elements.resultsPane.style.display = 'none';
         });
 
         elements.calculateBtn.addEventListener('click', calculateEstimate);
         elements.clearBtn.addEventListener('click', clearForm);
-
-        // 'Enter' key navigation
-        const inputs = [elements.cbm, elements.cartonCount, elements.skuCount, elements.loadType, elements.location, elements.storage];
-        inputs.forEach((input, index) => {
-            input.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    const nextInput = inputs[index + 1];
-                    if (nextInput) {
-                        nextInput.focus();
-                    } else {
-                        elements.calculateBtn.focus(); // Focus on calculate button at the end
-                    }
-                }
-            });
-        });
     }
    
     initialize();
