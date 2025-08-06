@@ -120,15 +120,13 @@
             const data = await response.json();
             const sheetValues = data.values;
            
-            // *** NEW ROBUST PARSING LOGIC ***
             const cleanAndParse = (input, isFloat = true) => {
                 const cleanedString = String(input || '0').replace(/,/g, '').trim();
                 return isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
             };
 
-            // Searches the ENTIRE ROW for the header text, making it immune to merged cell issues.
             const findHeaderRow = (textToFind) => sheetValues.findIndex(row =>
-                row && row.some(cell => cell && typeof cell === 'string' && cell.trim().toUpperCase().includes(textToFind.toUpperCase()))
+                row && row.some(cell => cell && typeof cell === 'string' && cell.trim().toUpperCase() === textToFind.toUpperCase())
             );
 
             const getRowData = (arr) => ({
@@ -138,15 +136,15 @@
             });
 
             // Dynamically find table start rows
-            const bellStart = findHeaderRow('BELL PRICING') + 2;
+            const laStart = findHeaderRow('LOS ANGELES PRICING') + 2;
             const savannahStart = findHeaderRow('SAVANNAH PRICING') + 2;
-            const njStart = findHeaderRow('NEW JERSEY PRICING') + 2;
-            const carrierStart = findHeaderRow('CARRIER PRICING') + 2;
+            const nyStart = findHeaderRow('NEW YORK PRICING') + 2;
+            const carrierStart = findHeaderRow('CARRIER PRICING (TO WAREHOUSE)') + 2;
            
             pricingData.locations = {
-                'BELL': { '20GP': getRowData(sheetValues[bellStart]), '40GP/HQ': getRowData(sheetValues[bellStart + 1]), '45HQ': getRowData(sheetValues[bellStart + 2]) },
+                'LOS ANGELES': { '20GP': getRowData(sheetValues[laStart]), '40GP/HQ': getRowData(sheetValues[laStart + 1]), '45HQ': getRowData(sheetValues[laStart + 2]) },
                 'SAVANNAH': { '20GP': getRowData(sheetValues[savannahStart]), '40GP/HQ': getRowData(sheetValues[savannahStart + 1]), '45HQ': getRowData(sheetValues[savannahStart + 2]) },
-                'NEW JERSEY': { '20GP': getRowData(sheetValues[njStart]), '40GP/HQ': getRowData(sheetValues[njStart + 1]), '45HQ': getRowData(sheetValues[njStart + 2]) }
+                'NEW YORK': { '20GP': getRowData(sheetValues[nyStart]), '40GP/HQ': getRowData(sheetValues[nyStart + 1]), '45HQ': getRowData(sheetValues[nyStart + 2]) }
             };
 
             pricingData.carrier = {};
@@ -167,10 +165,10 @@
                 if(sheetValues[i] && sheetValues[i][8]){
                     const key = String(sheetValues[i][8]).trim();
                     const value = sheetValues[i][9];
-                    if (value !== null && value !== undefined) {
+                    if (value !== null && value !== undefined && key !== "") {
                         if(key.toLowerCase().includes('cbm') || key.toLowerCase().includes('max') || key.toLowerCase().includes('threshold') || key.toLowerCase().includes('side')) {
                             pricingData.limitations[key] = value === '>65' ? 65 : cleanAndParse(value);
-                        } else if (key) {
+                        } else {
                            pricingData.extraCharges[key] = cleanAndParse(value);
                         }
                     }
@@ -207,12 +205,8 @@
             else if (cbm <= cbm40GP) containerType = '40GP/HQ';
             else containerType = '45HQ';
 
-            const locationMap = {'LOS ANGELES': 'BELL', 'SAVANNAH': 'SAVANNAH', 'NEW YORK': 'NEW JERSEY'};
-            const locKey = locationMap[locationInput];
-            if (!locKey || !pricingData.locations[locKey]) { alert(`Error: Could not find base pricing for "${locationInput}". Check if the pricing table headers are correct in the sheet.`); return; }
-           
-            const basePricing = pricingData.locations[locKey][containerType];
-            if (!basePricing) { alert(`Error: Could not find pricing for container type ${containerType}.`); return; }
+            const basePricing = pricingData.locations[locationInput][containerType];
+            if (!basePricing) { alert(`Error: Could not find base pricing for "${locationInput}". Check that the pricing table header matches the location name.`); return; }
 
             if (isNaN(skuCount) || skuCount <= 0) { skuCount = basePricing.includedSKUs; }
            
