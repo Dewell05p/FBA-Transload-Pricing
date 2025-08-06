@@ -207,7 +207,6 @@
                 if(sheetValues[i] && sheetValues[i][8]){
                     const key = String(sheetValues[i][8]).trim();
                     const value = sheetValues[i][9];
-                    // Check if value is not undefined or null before parsing
                     if (value !== null && value !== undefined) {
                         pricingData.extraCharges[key] = cleanAndParse(value);
                         if(key.toLowerCase().includes('cbm') || key.toLowerCase().includes('max') || key.toLowerCase().includes('threshold') || key.toLowerCase().includes('side')) {
@@ -222,7 +221,7 @@
             elements.palletNote.innerHTML = `<strong>Note:</strong> Pallet count ranges are estimated using an Operations value of ${opCBM} CBM/pallet and a Warehouse value of ${whCBM} CBM/pallet.`;
 
         } catch (error) {
-            elements.resultsPane.style.display = 'none'; // Hide results on error
+            elements.resultsPane.style.display = 'none';
             alert(`Error loading data. Please check the Developer Console (F12) for more details.`);
             console.error(error);
         }
@@ -253,6 +252,8 @@
                 'NEW YORK': 'NEW JERSEY'
             };
             const locKey = locationMap[locationInput];
+            if (!locKey || !pricingData.locations[locKey]) { alert(`Error: Could not find base pricing for "${locationInput}".`); return; }
+           
             const basePricing = pricingData.locations[locKey][containerType];
 
             if (isNaN(skuCount) || skuCount <= 0) { skuCount = basePricing.includedSKUs; }
@@ -290,7 +291,7 @@
            
             elements.resultsPane.classList.add('visible');
         } catch (error) {
-            alert("A calculation error occurred. Please check that all required values exist in the Google Sheet and try again.");
+            alert("A calculation error occurred. This is often due to a mismatch between the sheet data and the tool's expectations. Please check the Developer Console (F12) for details.");
             console.error("Calculation Error:", error);
         }
     }
