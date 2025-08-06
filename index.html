@@ -120,11 +120,13 @@
             if (!response.ok) throw new Error(`Google Sheets API Error: ${(await response.json()).error.message}`);
             const data = await response.json();
             const sheetValues = data.values;
-            console.log("Step 2: Data fetched. Parsing...");
+            console.log("Step 2: Data fetched. Parsing with direct ranges...");
            
             const cleanAndParse = (input, isFloat = true) => {
-                const cleanedString = String(input || '0').replace(/,/g, '').trim();
-                return isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
+                if (input === null || input === undefined) return 0;
+                const cleanedString = String(input).replace(/,/g, '').trim();
+                const num = isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
+                return isNaN(num) ? 0 : num;
             };
 
             const getRowData = (arr) => ({
@@ -134,9 +136,21 @@
             });
            
             pricingData.locations = {
-                'LOS ANGELES': {'20GP': getRowData(sheetValues[2]),'40GP/HQ': getRowData(sheetValues[3]),'45HQ': getRowData(sheetValues[4])},
-                'SAVANNAH': {'20GP': getRowData(sheetValues[8]),'40GP/HQ': getRowData(sheetValues[9]),'45HQ': getRowData(sheetValues[10])},
-                'NEW YORK': {'20GP': getRowData(sheetValues[14]),'40GP/HQ': getRowData(sheetValues[15]),'45HQ': getRowData(sheetValues[16])}
+                'LOS ANGELES': {
+                    '20GP': getRowData(sheetValues[2]),    // Sheet Row 3
+                    '40GP/HQ': getRowData(sheetValues[3]), // Sheet Row 4
+                    '45HQ': getRowData(sheetValues[4])     // Sheet Row 5
+                },
+                'SAVANNAH': {
+                    '20GP': getRowData(sheetValues[8]),    // Sheet Row 9
+                    '40GP/HQ': getRowData(sheetValues[9]), // Sheet Row 10
+                    '45HQ': getRowData(sheetValues[10])    // Sheet Row 11
+                },
+                'NEW YORK': {
+                    '20GP': getRowData(sheetValues[14]),   // Sheet Row 15
+                    '40GP/HQ': getRowData(sheetValues[15]),// Sheet Row 16
+                    '45HQ': getRowData(sheetValues[16])    // Sheet Row 17
+                }
             };
 
             pricingData.carrier = {};
@@ -158,16 +172,15 @@
             chargesDataRows.forEach(row => {
                 if (row && row[8]) pricingData.extraCharges[String(row[8]).trim()] = cleanAndParse(row[9]);
             });
-            const limitsDataRows = sheetValues.slice(16, 28);
+            const limitsDataRows = sheetValues.slice(17, 28);
             limitsDataRows.forEach(row => {
                 if (row && row[8]) {
                     const key = String(row[8]).trim();
-                    let value = row[9];
-                    if (key === 'Container Threshold CBM (40GP/HQ)') {
-                        const upperBound = String(value).split('-')[1];
-                        pricingData.limitations[key] = cleanAndParse(upperBound);
+                    const value = String(row[9] || '');
+                    if (key.includes('40GP/HQ')) {
+                        pricingData.limitations[key] = cleanAndParse(value.split('-')[1]);
                     } else {
-                        pricingData.limitations[key] = value === '>65' ? 65 : cleanAndParse(value);
+                        pricingData.limitations[key] = value.includes('>') ? cleanAndParse(value.replace('>', '')) : cleanAndParse(value);
                     }
                 }
             });
@@ -176,10 +189,10 @@
 
             const opCBM = pricingData.limitations['CBM per Pallet (Operations)'];
             const whCBM = pricingData.limitations['CBM per Pallet (Warehouse)'];
-            elements.palletNote.innerHTML = `<strong>Note:</strong> Pallet count ranges are estimated using an Operations value of ${opCBM} CBM/pallet and a Warehouse value of ${whCBM} CBM/pallet.`;
+            elements.palletNote.innerHTML = `<strong>Note:</strong> Pallet count is an estimate based on an Operations value of ${opCBM} and Warehouse value of ${whCBM} CBM/pallet.`;
 
         } catch (error) {
-            alert(`Error during data loading. The sheet structure may be incorrect. Please check the Developer Console (F12).`);
+            alert(`A critical error occurred while loading data from the sheet. The sheet structure may be incorrect. Please check the Developer Console (F12).`);
             console.error("Data Loading Error:", error);
         }
     }
@@ -244,7 +257,7 @@
            
             elements.resultsPane.classList.add('visible');
         } catch (error) {
-            alert("A calculation error occurred. The sheet data may be missing or structured incorrectly. Please check the Developer Console (F12) for details.");
+            alert("A calculation error occurred. This is often due to missing or incorrect data in the Google Sheet. Please check the Developer Console (F12) for details.");
             console.error("Calculation Error:", error);
         }
     }
