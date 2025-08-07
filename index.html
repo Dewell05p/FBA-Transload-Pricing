@@ -11,7 +11,13 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <style>
         #resultsPane {
-            transition: all 0.3s ease-in-out;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        #resultsPane.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
         .storage-btn {
             border: 1px solid #d1d5db;
@@ -20,13 +26,14 @@
             cursor: pointer;
             background-color: white;
             color: #374151;
-            transition: background-color 0.2s, color 0.2s;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
         }
         .storage-btn.active {
-            background-color: #1e40af; /* A shade of blue */
+            background-color: #0d80f2;
             color: white;
-            border-color: #1e40af;
+            border-color: #0d80f2;
         }
+        .result-item p.range { font-size: 1.25rem; }
     </style>
 </head>
 
@@ -54,73 +61,52 @@
                 </div>
             </header>
 
-            <div id="calculatorPage" class="px-10 md:px-40 flex flex-1 justify-center py-5">
+            <div id="welcomePage" class="px-10 md:px-40 flex flex-1 justify-center py-5">
+                <div class="layout-content-container flex flex-col w-full max-w-[960px] flex-1">
+                   <div class="text-center">
+                       <h1 class="text-4xl font-bold text-[#004d99]">FBA Shipment Cost Estimator</h1>
+                       <p class="text-lg text-slate-600 mt-2">(Excludes Last Mile Rates)</p>
+                   </div>
+                   <div class="instructions text-left my-10">
+                       <h3 class="text-xl font-bold text-[#004d99] border-b-2 border-[#0d80f2] pb-2 mb-4">Key Amazon FBA Shipment Guidelines</h3>
+                       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                           <div class="bg-white p-4 rounded-lg border border-slate-200"><p class="text-[#0d141c] text-base font-medium">Carton Limits</p><p class="text-slate-500 text-sm mt-1">Cartons must not exceed 25 inches on any side or weigh more than 50 pounds.</p></div>
+                           <div class="bg-white p-4 rounded-lg border border-slate-200"><p class="text-[#0d141c] text-base font-medium">Pallet Dimensions</p><p class="text-slate-500 text-sm mt-1">Use 40" x 48" pallets, not to exceed 72" in height or 1,500 lbs in weight.</p></div>
+                           <div class="bg-white p-4 rounded-lg border border-slate-200"><p class="text-[#0d141c] text-base font-medium">Oversized Products</p><p class="text-slate-500 text-sm mt-1">An item is oversized if it is over 20 lbs or has any side longer than 18 inches.</p></div>
+                       </div>
+                   </div>
+                   <div class="text-center"><button id="startBtn" class="flex mx-auto min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#0d80f2] text-slate-50 text-base font-bold"><span class="truncate">Start Estimating</span></button></div>
+               </div>
+           </div>
+
+            <div id="calculatorPage" class="px-10 md:px-40 flex flex-1 justify-center py-5" style="display:none;">
                 <div class="layout-content-container flex flex-col w-full max-w-[960px] flex-1">
                     <h2 class="text-2xl font-bold text-center">Estimate Costs</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 text-left">
-                        <div class="form-group">
-                            <label for="cbm" class="block text-sm font-medium text-gray-700">CBM (m³)</label>
-                            <input type="number" id="cbm" placeholder="e.g., 53" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        </div>
-                        <div class="form-group">
-                            <label for="cartonCount" class="block text-sm font-medium text-gray-700">Carton Count</label>
-                            <input type="number" id="cartonCount" placeholder="e.g., 1200" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        </div>
-                        <div class="form-group">
-                            <label for="skuCount" class="block text-sm font-medium text-gray-700">SKU Count (Optional)</label>
-                            <input type="number" id="skuCount" placeholder="Surcharge over 10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        </div>
-                        <div class="form-group">
-                            <label for="loadType" class="block text-sm font-medium text-gray-700">Type of Load</label>
-                            <select id="loadType" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                <option value="" disabled selected>Select...</option>
-                                <option value="Floor in/Floor out">Floor in/Floor out</option>
-                                <option value="Palletized">Palletized</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
-                            <select id="location" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                <option value="" disabled selected>Select...</option>
-                                <option value="LOS ANGELES">Los Angeles</option>
-                                <option value="SAVANNAH">Savannah</option>
-                                <option value="NEW YORK">New York</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                             <label class="block text-sm font-medium text-gray-700">Storage Required?</label>
-                             <div id="storage" class="flex mt-1">
-                                <button class="storage-btn" data-value="Yes">Yes</button>
-                                <button class="storage-btn active" data-value="No">No</button>
-                            </div>
-                        </div>
+                        <div class="form-group"><label for="cbm" class="block text-sm font-medium text-gray-700">CBM (m³)</label><input type="number" id="cbm" placeholder="e.g., 53" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
+                        <div class="form-group"><label for="cartonCount" class="block text-sm font-medium text-gray-700">Carton Count</label><input type="number" id="cartonCount" placeholder="e.g., 1200" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
+                        <div class="form-group"><label for="skuCount" class="block text-sm font-medium text-gray-700">SKU Count</label><input type="number" id="skuCount" placeholder="Optional" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
+                        <div class="form-group"><label for="loadType" class="block text-sm font-medium text-gray-700">Type of Load</label><select id="loadType" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"><option value="" disabled selected>Select...</option><option value="Floor in/Floor out">Floor in/Floor out</option><option value="Palletized">Palletized</option></select></div>
+                        <div class="form-group"><label for="location" class="block text-sm font-medium text-gray-700">Location</label><select id="location" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"><option value="" disabled selected>Select...</option><option value="LOS ANGELES">LOS ANGELES</option><option value="SAVANNAH">SAVANNAH</option><option value="NEW YORK">NEW YORK</option></select></div>
+                        <div class="form-group"><label class="block text-sm font-medium text-gray-700">Storage Required?</label><div id="storage" class="flex mt-1"><button class="storage-btn" data-value="Yes">Yes</button><button class="storage-btn active" data-value="No">No</button></div></div>
                     </div>
                     <div class="flex gap-4 mt-8">
-                        <button id="calculateBtn" class="flex-1 flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#0d80f2] text-slate-50 text-base font-bold leading-normal tracking-[0.015em]"><span class="truncate">Calculate</span></button>
-                        <button id="clearBtn" class="flex-1 flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-slate-600 text-slate-50 text-base font-bold leading-normal tracking-[0.015em]"><span class="truncate">Clear</span></button>
+                        <button id="calculateBtn" class="flex-1 flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#0d80f2] text-slate-50 text-base font-bold"><span class="truncate">Calculate</span></button>
+                        <button id="clearBtn" class="flex-1 flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-slate-600 text-slate-50 text-base font-bold"><span class="truncate">Clear</span></button>
                     </div>
-
+                   
                     <div id="resultsPane" class="mt-10 p-6 bg-blue-50 border border-blue-200 rounded-lg" style="display:none;">
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-6 text-center">
-                            <div>
-                                <h4 class="text-sm font-medium text-slate-500">Container Type</h4>
-                                <p id="containerType" class="text-2xl font-bold text-[#0d80f2] mt-1">-</p>
-                            </div>
-                            <div>
-                                <h4 class="text-sm font-medium text-slate-500">Pallet Count</h4>
-                                <p id="palletCount" class="text-2xl font-bold text-[#0d80f2] mt-1">-</p>
-                            </div>
-                            <div class="col-span-2 md:col-span-1">
-                                <h4 class="text-sm font-medium text-slate-500">All-in Rate</h4>
-                                <p id="allInRate" class="text-2xl font-bold text-green-600 mt-1">$0.00</p>
-                            </div>
+                            <div><h4 class="text-sm font-medium text-slate-500">Container Type</h4><p id="containerType" class="text-2xl font-bold text-[#0d80f2] mt-1">-</p></div>
+                            <div><h4 class="text-sm font-medium text-slate-500">Pallet Count</h4><p id="palletCount" class="text-2xl font-bold text-[#0d80f2] mt-1">-</p></div>
+                            <div class="col-span-2 md:col-span-1"><h4 class="text-sm font-medium text-slate-500">All-in Rate</h4><p id="allInRate" class="text-2xl font-bold text-green-600 mt-1">$0.00</p></div>
                         </div>
                     </div>
 
                     <div class="mt-8 text-left text-xs text-slate-500 bg-slate-100 p-4 rounded-lg">
-                         <p><strong>Note 1:</strong> Price includes Drayage, CSR Commission, and Base Service Fee. Carrier costs include a set number of free chassis days; additional chassis fees only apply if standard usage days exceed free days.</p>
-                         <p class="mt-2"><strong>Note 2:</strong> Surcharges for cartons and SKUs are applied if counts exceed the included amounts for the container type. Storage fees are added if selected.</p>
-                         <p id="palletNote" class="mt-2"><strong>Note 3:</strong> For palletized loads, pallet count and cost ranges are shown. The lower estimate uses a high-density "Operations" pack-out, and the higher estimate uses a standard "Warehouse" pack-out.</p>
+                         <p><strong>Note 1:</strong> The All-in Rate includes the Base Service Fee, Drayage, and CSR Commission. Surcharges for extra cartons or SKUs, plus optional storage fees, are added as needed.</p>
+                         <p class="mt-2"><strong>Note 2:</strong> Carrier costs include a set number of free chassis days. Additional chassis fees only apply if the standard usage days exceed the free days provided by the carrier.</p>
+                         <p class="mt-2"><strong>Note 3:</strong> For palletized loads, a cost range is shown because the final pallet count can vary. The lower estimate assumes an optimal "Operations" pack-out, while the higher estimate assumes a standard "Warehouse" pack-out.</p>
                     </div>
                 </div>
             </div>
@@ -131,12 +117,15 @@
         // --- Configuration ---
         const API_KEY = 'AIzaSyAgRYDlwfXHI0AWVOpY8OHHCd7aVgS4Bcc';
         const SPREADSHEET_ID = '1QrO4kP9ikY8Ukr8sxi6egOcPJkbaiGLvx7r4nuDn7cU';
+        const PASSWORD = 'admin123';
         // ---------------------
 
         let pricingData = {};
         const elements = {
             appContainer: document.getElementById('app-container'),
+            welcomePage: document.getElementById('welcomePage'),
             calculatorPage: document.getElementById('calculatorPage'),
+            startBtn: document.getElementById('startBtn'),
             cbm: document.getElementById('cbm'),
             cartonCount: document.getElementById('cartonCount'),
             skuCount: document.getElementById('skuCount'),
@@ -152,64 +141,76 @@
         };
 
         function parseSheetData(values) {
-            const data = { locations: {}, carrier: {}, rates: {}, constants: {} };
+            const data = { locations: {}, carrier: {}, rates: {}, values: {} };
             const cleanAndParse = (input, isFloat = true) => {
                 if (input === undefined || input === null || input === '') return 0;
-                const cleanedString = String(input).replace(/[\$,]/g, '');
+                const cleanedString = String(input).replace(/[\$,]/g, '').trim();
+                if (cleanedString.includes('-')) {
+                    const parts = cleanedString.split('-');
+                    return { min: cleanAndParse(parts[0]), max: cleanAndParse(parts[1]) };
+                }
+                if (cleanedString.includes('>')) {
+                    return cleanAndParse(cleanedString.replace('>', ''));
+                }
                 const number = isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
                 return isNaN(number) ? 0 : number;
             };
            
-            const findHeaderRow = (headerText) => values.findIndex(row => row && row[0] && row[0].trim().toUpperCase() === headerText.toUpperCase());
+            const findHeaderRow = (textToFind, col=0) => values.findIndex(row => row && row[col] && row[col].trim().toUpperCase().includes(textToFind.toUpperCase()));
 
-            const locationHeaders = ["LOS ANGELES PRICING", "SAVANNAH PRICING", "NEW YORK PRICING"];
-            locationHeaders.forEach(header => {
-                const startRow = findHeaderRow(header);
-                if (startRow !== -1) {
-                    const locationKey = header.replace(" PRICING", "");
-                    data.locations[locationKey] = {};
-                    for (let i = startRow + 2; i < startRow + 5; i++) {
+            try {
+                const locationHeaders = ["LOS ANGELES PRICING", "SAVANNAH PRICING", "NEW YORK PRICING"];
+                locationHeaders.forEach(header => {
+                    const startRow = findHeaderRow(header);
+                    if (startRow !== -1) {
+                        const locationKey = header.replace(" PRICING", "");
+                        data.locations[locationKey] = {};
+                        for (let i = startRow + 2; i < startRow + 5; i++) {
+                            const row = values[i];
+                            if (row && row[0]) {
+                                const containerKey = row[0].trim().toUpperCase().replace(/\s|\//g, '');
+                                data.locations[locationKey][containerKey] = {
+                                    basePrice: cleanAndParse(row[1]),
+                                    includedCartons: cleanAndParse(row[2], false),
+                                    includedSKUs: cleanAndParse(row[3], false),
+                                    displayName: row[0].trim()
+                                };
+                            }
+                        }
+                    }
+                });
+
+                const carrierStartRow = findHeaderRow("CARRIER PRICING");
+                if (carrierStartRow !== -1) {
+                    for (let i = carrierStartRow + 2; i < carrierStartRow + 5; i++) {
                         const row = values[i];
                         if (row && row[0]) {
-                            const normalizedKey = row[0].trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-                            data.locations[locationKey][normalizedKey] = {
-                                basePrice: cleanAndParse(row[1]),
-                                includedCartons: cleanAndParse(row[2], false),
-                                includedSkus: cleanAndParse(row[3], false),
-                                displayName: row[0].trim()
+                            data.carrier[row[0].toUpperCase().trim()] = {
+                                drayRate: cleanAndParse(row[2]), chassisCost: cleanAndParse(row[3]),
+                                standardChassisDays: cleanAndParse(row[4], false), freeChassisDays: cleanAndParse(row[5], false),
+                                csrCommission: cleanAndParse(row[6])
                             };
                         }
                     }
                 }
-            });
 
-            const carrierStartRow = findHeaderRow("CARRIER PRICING");
-            if (carrierStartRow !== -1) {
-                for (let i = carrierStartRow + 2; i < carrierStartRow + 5; i++) {
-                    const row = values[i];
-                     if (row && row[0]) {
-                        data.carrier[row[0].toUpperCase()] = {
-                            drayRate: cleanAndParse(row[2]),
-                            chassisCost: cleanAndParse(row[3]),
-                            standardChassisDays: cleanAndParse(row[4], false),
-                            freeChassisDays: cleanAndParse(row[5], false),
-                            csrCommission: cleanAndParse(row[6])
-                        };
+                const chargesStartRow = findHeaderRow("Description", 8);
+                if (chargesStartRow !== -1) {
+                    for(let i = chargesStartRow + 1; i < values.length; i++) {
+                        const row = values[i];
+                        if (!row || !row[8]) continue;
+                        const key = row[8].trim();
+                        if (key.toLowerCase().includes('threshold') || key.toLowerCase().includes('pallet') || key.toLowerCase().includes('max')) {
+                           data.values[key] = cleanAndParse(row[9]);
+                        } else if (key) {
+                           data.rates[key] = cleanAndParse(row[9]);
+                        }
                     }
                 }
+            } catch (error) {
+                console.error("Error during data parsing:", error);
+                throw new Error("The spreadsheet structure seems incorrect. Could not read data properly.");
             }
-
-            values.forEach(row => {
-                if (!row) return;
-                const key = row[8];
-                const value = row[9];
-                if(key) {
-                    const cleanedKey = key.trim();
-                    if(cleanedKey.toLowerCase().includes('surcharge')) data.rates[cleanedKey] = cleanAndParse(value);
-                    else if (cleanedKey.toLowerCase().includes('cbm per pallet')) data.constants[cleanedKey] = cleanAndParse(value);
-                    else if (cleanedKey.toLowerCase().includes('storage')) data.rates[cleanedKey] = cleanAndParse(value);
-                }
-            });
             return data;
         }
 
@@ -225,7 +226,6 @@
                 }
                 const rawData = await response.json();
                 pricingData = parseSheetData(rawData.values);
-                elements.appContainer.style.display = 'flex';
             } catch (error) {
                 alert(`Fatal Error: Could not load pricing data. ${error.message}. Please check API Key and Sheet settings, then refresh.`);
                 console.error(error);
@@ -233,57 +233,47 @@
         }
 
         function calculateEstimate() {
-            const cbm = parseFloat(elements.cbm.value);
-            const cartonCount = parseInt(elements.cartonCount.value);
-            let skuCount = parseInt(elements.skuCount.value);
+            try {
+                const cbm = parseFloat(elements.cbm.value);
+                const cartonCount = parseInt(elements.cartonCount.value);
+                let skuCount = parseInt(elements.skuCount.value);
+                const loadType = elements.loadType.value;
+                const location = elements.location.value;
+                const storageRequired = elements.storage.querySelector('.active').dataset.value === 'Yes';
+               
+                if (isNaN(cbm) || cbm <= 0 || isNaN(cartonCount) || cartonCount <= 0) { alert('Please enter valid, positive numbers for CBM and Carton Count.'); return; }
+                if (!loadType || !location) { alert('Please select a Type of Load and a Location.'); return; }
 
-            if (isNaN(skuCount) || skuCount <= 0) {
-                skuCount = 1;
-            }
-           
-            const loadType = elements.loadType.value;
-            const location = elements.location.value;
-            const storageRequired = elements.storage.querySelector('.active').dataset.value === 'Yes';
-           
-            if (isNaN(cbm) || cbm <= 0 || isNaN(cartonCount) || cartonCount <= 0) {
-                alert('Please enter valid, positive numbers for CBM and Carton Count.');
-                return;
-            }
-            if (!loadType || !location) {
-                alert('Please select a Type of Load and a Location.');
-                return;
-            }
+                let containerKey;
+                const th20 = pricingData.values['Container Threshold CBM (20GP)'];
+                const th40 = pricingData.values['Container Threshold CBM (40GP/HQ)'];
+                if (cbm <= th20) containerKey = '20GP';
+                else if (cbm >= th40.min && cbm <= th40.max) containerKey = '40GPHQ';
+                else containerKey = '45HQ';
 
-            let containerKey;
-            if (cbm <= 32) containerKey = '20GP';
-            else if (cbm >= 33 && cbm <= 65) containerKey = '40GPHQ';
-            else containerKey = '45HQ';
+                const corePricing = pricingData.locations[location]?.[containerKey];
+                if (!corePricing) { alert(`Error: Could not find pricing for ${location} and container ${containerKey}.`); return; }
+               
+                const carrierInfo = pricingData.carrier[location];
+                if (!carrierInfo) { alert(`Error: Could not find carrier info for ${location}.`); return; }
 
-            const corePricing = pricingData.locations[location]?.[containerKey];
-            if (!corePricing) {
-                alert(`Error: Could not find pricing for ${location} and container key ${containerKey}. Please check the container names in the Google Sheet.`);
-                return;
+                if (isNaN(skuCount) || skuCount <= 0) skuCount = corePricing.includedSKUs;
+               
+                if (loadType === 'Floor in/Floor out') {
+                    calculateFloorLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo);
+                } else if (loadType === 'Palletized') {
+                    calculatePalletizedLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo);
+                }
+                elements.resultsPane.classList.add('visible');
+            } catch (error) {
+                alert("A calculation error occurred. Please check your inputs and the sheet data.");
+                console.error("Calculation Error:", error);
             }
-           
-            const carrierInfo = pricingData.carrier[location];
-            if (!carrierInfo) {
-                alert(`Error: Could not find carrier info for ${location}.`);
-                return;
-            }
-
-            if (loadType === 'Floor in/Floor out') {
-                calculateFloorLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo);
-            } else if (loadType === 'Palletized') {
-                calculatePalletizedLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo);
-            }
-
-            elements.resultsPane.style.display = 'block';
         }
 
         function calculateFloorLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo) {
-            const cartonSurcharge = Math.max(0, cartonCount - corePricing.includedCartons) * (pricingData.rates['Carton Surcharge (Floor in/Pallet out)'] || 0);
-            // UPDATED: Calculate SKU surcharge on a per-SKU basis over the included amount
-            const skuSurcharge = Math.max(0, skuCount - corePricing.includedSkus) * (pricingData.rates['Sort Surcharge (Floor in/Floor out)'] || 0);
+            const cartonSurcharge = Math.max(0, cartonCount - corePricing.includedCartons) * (pricingData.rates['Carton Surcharge (Floor in/Floor out)'] || 0);
+            const skuSurcharge = Math.max(0, skuCount - corePricing.includedSKUs) * (pricingData.rates['Sort Surcharge (Floor in/Floor out)'] || 0);
             const chassisCost = (carrierInfo.standardChassisDays > carrierInfo.freeChassisDays) ? carrierInfo.chassisCost : 0;
             const totalCarrierCost = carrierInfo.drayRate + carrierInfo.csrCommission + chassisCost;
             const storageFee = storageRequired ? cbm * (pricingData.rates['Storage CBM/Day (All)'] || 0) : 0;
@@ -295,26 +285,23 @@
         }
        
         function calculatePalletizedLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo) {
-            const opsPallets = Math.ceil(cbm / (pricingData.constants['CBM per Pallet (Operations)'] || 2.20));
-            const warehousePallets = Math.ceil(cbm / (pricingData.constants['CBM per Pallet (Warehouse)'] || 1.70));
+            const opsPallets = Math.ceil(cbm / (pricingData.values['CBM per Pallet (Operations)'] || 2.20));
+            const warehousePallets = Math.ceil(cbm / (pricingData.values['CBM per Pallet (Warehouse)'] || 1.70));
            
             const cartonSurcharge = Math.max(0, cartonCount - corePricing.includedCartons) * (pricingData.rates['Carton Surcharge (Floor in/Pallet out)'] || 0);
-            // UPDATED: Calculate SKU surcharge on a per-SKU basis over the included amount
-            const skuSurcharge = Math.max(0, skuCount - corePricing.includedSkus) * (pricingData.rates['Sort Surcharge (Floor in/Pallet out)'] || 0);
+            const skuSurcharge = Math.max(0, skuCount - corePricing.includedSKUs) * (pricingData.rates['Sort Surcharge (Floor in/Pallet out)'] || 0);
             const chassisCost = (carrierInfo.standardChassisDays > carrierInfo.freeChassisDays) ? carrierInfo.chassisCost : 0;
             const totalCarrierCost = carrierInfo.drayRate + carrierInfo.csrCommission + chassisCost;
             const storageFee = storageRequired ? cbm * (pricingData.rates['Storage CBM/Day (All)'] || 0) : 0;
             const commonCosts = corePricing.basePrice + cartonSurcharge + skuSurcharge + totalCarrierCost + storageFee;
             const outboundPalletRate = pricingData.rates['Outbound Pallet Surcharge (Floor in/Pallet out)'] || 0;
-            const outboundOpsSurcharge = opsPallets * outboundPalletRate;
-            const outboundWarehouseSurcharge = warehousePallets * outboundPalletRate;
            
-            const lowEndRate = commonCosts + outboundOpsSurcharge;
-            const highEndRate = commonCosts + outboundWarehouseSurcharge;
+            const lowEndRate = commonCosts + (opsPallets * outboundPalletRate);
+            const highEndRate = commonCosts + (warehousePallets * outboundPalletRate);
 
             elements.containerType.textContent = corePricing.displayName;
-            elements.palletCount.textContent = `${opsPallets} - ${warehousePallets}`;
-            elements.allInRate.textContent = `${lowEndRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} - ${highEndRate.toLocaleString('en-US', { style: 'currency', 'currency': 'USD' })}`;
+            elements.palletCount.innerHTML = `<span class="range">${opsPallets} - ${warehousePallets}</span>`;
+            elements.allInRate.innerHTML = `<span class="range">${lowEndRate.toLocaleString('en-US', { style: 'currency', 'currency': 'USD' })} - ${highEndRate.toLocaleString('en-US', { style: 'currency', 'currency': 'USD' })}</span>`;
         }
 
         function clearForm() {
@@ -323,15 +310,24 @@
             elements.skuCount.value = '';
             elements.loadType.value = '';
             elements.location.value = '';
-            elements.resultsPane.style.display = 'none';
-            // Ensure storage buttons default to "No"
+            elements.resultsPane.classList.remove('visible');
             elements.storage.querySelector('[data-value="Yes"]').classList.remove('active');
             elements.storage.querySelector('[data-value="No"]').classList.add('active');
             elements.cbm.focus();
         }
 
         function initialize() {
+            const password = prompt("Enter Password");
+            if(password !== PASSWORD) {
+                document.body.innerHTML = `<h1 class="text-red-500 text-center text-2xl p-8">Access Denied</h1>`;
+                return;
+            }
             fetchAndParseData();
+
+            elements.startBtn.addEventListener('click', () => {
+                elements.welcomePage.style.display = 'none';
+                elements.calculatorPage.style.display = 'flex';
+            });
             elements.storage.addEventListener('click', (event) => {
                 if (event.target.tagName === 'BUTTON') {
                     elements.storage.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
