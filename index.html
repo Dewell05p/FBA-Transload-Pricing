@@ -68,9 +68,9 @@
                    
                     <div id="resultsPane" class="mt-10 p-6 bg-blue-50 border border-blue-200 rounded-lg">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                            <div class="md-col-span-3"><h4 class="text-sm font-medium text-slate-500">Container Type</h4><p id="containerType" class="text-2xl font-bold text-[#0d80f2] mt-1">-</p></div>
+                            <div class="md:col-span-3"><h4 class="text-sm font-medium text-slate-500">Container Type</h4><p id="containerType" class="text-2xl font-bold text-[#0d80f2] mt-1">-</p></div>
                             <div class="result-item"><h4 class="text-sm font-medium text-slate-500">Pallet Count</h4><p id="palletCount" class="text-2xl font-bold text-[#0d80f2] mt-1">-</p></div>
-                            <div class="result-item md-col-span-2"><h4 class="text-sm font-medium text-slate-500">All-in Rate</h4><p id="allInRate" class="text-2xl font-bold text-green-600 mt-1">$0.00</p></div>
+                            <div class="result-item md:col-span-2"><h4 class="text-sm font-medium text-slate-500">All-in Rate</h4><p id="allInRate" class="text-2xl font-bold text-green-600 mt-1">$0.00</p></div>
                         </div>
                     </div>
 
@@ -120,7 +120,7 @@
             if (!response.ok) throw new Error(`Google Sheets API Error: ${(await response.json()).error.message}`);
             const data = await response.json();
             const sheetValues = data.values;
-            console.log("Step 2: Data fetched. Parsing with direct ranges...");
+            console.log("Step 2: Data fetched. Parsing with direct, simple ranges...");
            
             pricingData = {};
 
@@ -174,7 +174,7 @@
                     const key = String(row[8]).trim();
                     const value = String(row[9] || '').trim();
                     if (key) {
-                         if (key === 'Container Threshold CBM (40GP/HQ)') {
+                        if (key === 'Container Threshold CBM (40GP/HQ)') {
                             const parts = value.split('-');
                             pricingData.values[key] = { min: cleanAndParse(parts[0]), max: cleanAndParse(parts[1]) };
                         } else {
@@ -195,7 +195,6 @@
     }
 
     function calculateEstimate() {
-        console.log("--- Calculation Started ---");
         try {
             const cbm = parseFloat(elements.cbm.value);
             const cartonCount = parseInt(elements.cartonCount.value);
@@ -203,14 +202,12 @@
             const loadType = elements.loadType.value;
             const locationInput = elements.location.value;
             const storage = elements.storage.value;
-            console.log("Inputs:", { cbm, cartonCount, skuCount, loadType, locationInput, storage });
 
             if (isNaN(cbm) || cbm <= 0 || isNaN(cartonCount) || cartonCount <= 0) { alert('Please enter valid numbers for CBM and Carton Count.'); return; }
             if (!loadType || !locationInput) { alert('Please select a Type of Load and a Location.'); return; }
 
             const th20GP = pricingData.values['Container Threshold CBM (20GP)'];
             const th40GP = pricingData.values['Container Threshold CBM (40GP/HQ)'];
-            console.log("Thresholds:", { th20GP, th40GP });
            
             let containerType;
             if (cbm <= th20GP) {
@@ -220,11 +217,9 @@
             } else {
                 containerType = '45HQ';
             }
-            console.log("Determined Container Type:", containerType);
            
             const basePricing = pricingData.locations[locationInput][containerType];
             if (!basePricing) { alert(`Error: Could not find base pricing for "${locationInput}" and container "${containerType}".`); return; }
-            console.log("Found Base Pricing:", basePricing);
 
             if (isNaN(skuCount) || skuCount <= 0) { skuCount = basePricing.includedSKUs; }
            
@@ -233,19 +228,18 @@
 
             let cartonSurcharge = (cartonCount > basePricing.includedCartons) ? (cartonCount - basePricing.includedCartons) * (pricingData.charges[cartonSurchargeKey] || 0) : 0;
             let skuSurcharge = (skuCount > basePricing.includedSKUs) ? (skuCount - basePricing.includedSKUs) * (pricingData.charges[skuSurchargeKey] || 0) : 0;
-            console.log("Surcharges:", { cartonSurcharge, skuSurcharge });
-
+           
             const carrierCosts = pricingData.carrier[locationInput];
             if (!carrierCosts) { alert(`Error: Could not find carrier pricing for "${locationInput}".`); return; }
-            console.log("Found Carrier Costs:", carrierCosts);
 
             let actualChassisCost = (carrierCosts.standardChassisDays > carrierCosts.freeChassisDays) ? carrierCosts.chassisCost : 0;
             const totalCarrierCost = carrierCosts.drayRate + actualChassisCost + carrierCosts.csrCommission;
+           
             const storageFee = (storage === 'Yes') ? (cbm * (pricingData.charges['Storage CBM/Day (All)'] || 0)) : 0;
             const commonCosts = basePricing.basePrice + cartonSurcharge + skuSurcharge + totalCarrierCost + storageFee;
-            console.log("Final Costs:", { basePrice: basePricing.basePrice, totalSurcharges: cartonSurcharge + skuSurcharge, totalCarrierCost, storageFee, totalCommon: commonCosts });
            
             elements.containerType.textContent = containerType;
+
             if (loadType === 'Palletized') {
                 const opCBM = pricingData.values['CBM per Pallet (Operations)'];
                 const whCBM = pricingData.values['CBM per Pallet (Warehouse)'];
@@ -258,13 +252,14 @@
                 const highEndRate = commonCosts + whSurcharge;
                 elements.palletCount.innerHTML = `<span class="range">${opPallets} - ${whPallets}</span>`;
                 elements.allInRate.innerHTML = `<span class="range">${lowEndRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} - ${highEndRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</span>`;
-            } else {
+            } else { // Floor in/Floor out
                 elements.palletCount.textContent = '-';
                 elements.allInRate.textContent = commonCosts.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
             }
+           
             elements.resultsPane.classList.add('visible');
         } catch (error) {
-            alert("A critical calculation error occurred. This is often due to missing or incorrect data in the Google Sheet. Please check the Developer Console (F12) for details.");
+            alert("A calculation error occurred. This is often due to missing or incorrect data in the Google Sheet. Please check the Developer Console (F12) for details.");
             console.error("Calculation Error:", error);
         }
     }
@@ -288,13 +283,31 @@
         } else {
             alert("Incorrect password. Access denied.");
         }
+
         elements.startBtn.addEventListener('click', () => {
             elements.welcomePage.style.display = 'none';
             elements.calculatorPage.style.display = 'flex';
             elements.resultsPane.style.display = 'none';
-});
+        });
+
         elements.calculateBtn.addEventListener('click', calculateEstimate);
         elements.clearBtn.addEventListener('click', clearForm);
+
+        // 'Enter' key navigation
+        const inputs = [elements.cbm, elements.cartonCount, elements.skuCount];
+        inputs.forEach((input, index) => {
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    const nextInput = inputs[index + 1];
+                    if (nextInput) {
+                        nextInput.focus();
+                    } else {
+                        elements.loadType.focus();
+                    }
+                }
+            });
+        });
     }
    
     initialize();
