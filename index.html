@@ -13,7 +13,6 @@
         #resultsPane {
             transition: all 0.3s ease-in-out;
         }
-        /* Style for the Yes/No storage buttons */
         .storage-btn {
             border: 1px solid #d1d5db;
             padding: 0.5rem 1rem;
@@ -21,6 +20,7 @@
             cursor: pointer;
             background-color: white;
             color: #374151;
+            transition: background-color 0.2s, color 0.2s;
         }
         .storage-btn.active {
             background-color: #1e40af; /* A shade of blue */
@@ -67,8 +67,8 @@
                             <input type="number" id="cartonCount" placeholder="e.g., 1200" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                         </div>
                         <div class="form-group">
-                            <label for="skuCount" class="block text-sm font-medium text-gray-700">SKU Count</label>
-                            <input type="number" id="skuCount" placeholder="e.g., 8" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <label for="skuCount" class="block text-sm font-medium text-gray-700">SKU Count (Optional)</label>
+                            <input type="number" id="skuCount" placeholder="Surcharge over 10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                         </div>
                         <div class="form-group">
                             <label for="loadType" class="block text-sm font-medium text-gray-700">Type of Load</label>
@@ -90,8 +90,8 @@
                         <div class="form-group">
                              <label class="block text-sm font-medium text-gray-700">Storage Required?</label>
                              <div id="storage" class="flex mt-1">
-                                <button class="storage-btn active" data-value="Yes">Yes</button>
-                                <button class="storage-btn" data-value="No">No</button>
+                                <button class="storage-btn" data-value="Yes">Yes</button>
+                                <button class="storage-btn active" data-value="No">No</button>
                             </div>
                         </div>
                     </div>
@@ -127,224 +127,222 @@
         </div>
     </div>
 
-<script>
-    // --- Configuration ---
-    const API_KEY = 'AIzaSyAgRYDlwfXHI0AWVOpY8OHHCd7aVgS4Bcc';
-    const SPREADSHEET_ID = '1QrO4kP9ikY8Ukr8sxi6egOcPJkbaiGLvx7r4nuDn7cU';
-    // ---------------------
+    <script>
+        // --- Configuration ---
+        const API_KEY = 'AIzaSyAgRYDlwfXHI0AWVOpY8OHHCd7aVgS4Bcc';
+        const SPREADSHEET_ID = '1QrO4kP9ikY8Ukr8sxi6egOcPJkbaiGLvx7r4nuDn7cU';
+        // ---------------------
 
-    let pricingData = {};
-    const elements = {
-        appContainer: document.getElementById('app-container'),
-        calculatorPage: document.getElementById('calculatorPage'),
-        cbm: document.getElementById('cbm'),
-        cartonCount: document.getElementById('cartonCount'),
-        skuCount: document.getElementById('skuCount'),
-        loadType: document.getElementById('loadType'),
-        location: document.getElementById('location'),
-        storage: document.getElementById('storage'),
-        calculateBtn: document.getElementById('calculateBtn'),
-        clearBtn: document.getElementById('clearBtn'),
-        resultsPane: document.getElementById('resultsPane'),
-        containerType: document.getElementById('containerType'),
-        palletCount: document.getElementById('palletCount'),
-        allInRate: document.getElementById('allInRate'),
-    };
-
-    function parseSheetData(values) {
-        const data = { locations: {}, carrier: {}, rates: {}, constants: {} };
-        const cleanAndParse = (input, isFloat = true) => {
-            if (input === undefined || input === null || input === '') return 0;
-            const cleanedString = String(input).replace(/[\$,]/g, '');
-            const number = isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
-            return isNaN(number) ? 0 : number;
+        let pricingData = {};
+        const elements = {
+            appContainer: document.getElementById('app-container'),
+            calculatorPage: document.getElementById('calculatorPage'),
+            cbm: document.getElementById('cbm'),
+            cartonCount: document.getElementById('cartonCount'),
+            skuCount: document.getElementById('skuCount'),
+            loadType: document.getElementById('loadType'),
+            location: document.getElementById('location'),
+            storage: document.getElementById('storage'),
+            calculateBtn: document.getElementById('calculateBtn'),
+            clearBtn: document.getElementById('clearBtn'),
+            resultsPane: document.getElementById('resultsPane'),
+            containerType: document.getElementById('containerType'),
+            palletCount: document.getElementById('palletCount'),
+            allInRate: document.getElementById('allInRate'),
         };
-       
-        const findHeaderRow = (headerText) => values.findIndex(row => row && row[0] && row[0].trim().toUpperCase() === headerText.toUpperCase());
 
-        const locationHeaders = ["LOS ANGELES PRICING", "SAVANNAH PRICING", "NEW YORK PRICING"];
-        locationHeaders.forEach(header => {
-            const startRow = findHeaderRow(header);
-            if (startRow !== -1) {
-                const locationKey = header.replace(" PRICING", "");
-                data.locations[locationKey] = {};
-                for (let i = startRow + 2; i < startRow + 5; i++) {
+        function parseSheetData(values) {
+            const data = { locations: {}, carrier: {}, rates: {}, constants: {} };
+            const cleanAndParse = (input, isFloat = true) => {
+                if (input === undefined || input === null || input === '') return 0;
+                const cleanedString = String(input).replace(/[\$,]/g, '');
+                const number = isFloat ? parseFloat(cleanedString) : parseInt(cleanedString, 10);
+                return isNaN(number) ? 0 : number;
+            };
+           
+            const findHeaderRow = (headerText) => values.findIndex(row => row && row[0] && row[0].trim().toUpperCase() === headerText.toUpperCase());
+
+            const locationHeaders = ["LOS ANGELES PRICING", "SAVANNAH PRICING", "NEW YORK PRICING"];
+            locationHeaders.forEach(header => {
+                const startRow = findHeaderRow(header);
+                if (startRow !== -1) {
+                    const locationKey = header.replace(" PRICING", "");
+                    data.locations[locationKey] = {};
+                    for (let i = startRow + 2; i < startRow + 5; i++) {
+                        const row = values[i];
+                        if (row && row[0]) {
+                            const normalizedKey = row[0].trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                            data.locations[locationKey][normalizedKey] = {
+                                basePrice: cleanAndParse(row[1]),
+                                includedCartons: cleanAndParse(row[2], false),
+                                includedSkus: cleanAndParse(row[3], false),
+                                displayName: row[0].trim()
+                            };
+                        }
+                    }
+                }
+            });
+
+            const carrierStartRow = findHeaderRow("CARRIER PRICING");
+            if (carrierStartRow !== -1) {
+                for (let i = carrierStartRow + 2; i < carrierStartRow + 5; i++) {
                     const row = values[i];
-                    if (row && row[0]) {
-                        // NEW: Normalize the key to be foolproof (e.g., "40GP/HQ" becomes "40GPHQ")
-                        const normalizedKey = row[0].trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-                        data.locations[locationKey][normalizedKey] = {
-                            basePrice: cleanAndParse(row[1]),
-                            includedCartons: cleanAndParse(row[2], false),
-                            includedSkus: cleanAndParse(row[3], false),
-                            displayName: row[0].trim() // NEW: Store the original name for display
+                     if (row && row[0]) {
+                        data.carrier[row[0].toUpperCase()] = {
+                            drayRate: cleanAndParse(row[2]),
+                            chassisCost: cleanAndParse(row[3]),
+                            standardChassisDays: cleanAndParse(row[4], false),
+                            freeChassisDays: cleanAndParse(row[5], false),
+                            csrCommission: cleanAndParse(row[6])
                         };
                     }
                 }
             }
-        });
 
-        const carrierStartRow = findHeaderRow("CARRIER PRICING");
-        if (carrierStartRow !== -1) {
-            for (let i = carrierStartRow + 2; i < carrierStartRow + 5; i++) {
-                const row = values[i];
-                 if (row && row[0]) {
-                    data.carrier[row[0].toUpperCase()] = {
-                        drayRate: cleanAndParse(row[2]),
-                        chassisCost: cleanAndParse(row[3]),
-                        standardChassisDays: cleanAndParse(row[4], false),
-                        freeChassisDays: cleanAndParse(row[5], false),
-                        csrCommission: cleanAndParse(row[6])
-                    };
+            values.forEach(row => {
+                if (!row) return;
+                const key = row[8];
+                const value = row[9];
+                if(key) {
+                    const cleanedKey = key.trim();
+                    if(cleanedKey.toLowerCase().includes('surcharge')) data.rates[cleanedKey] = cleanAndParse(value);
+                    else if (cleanedKey.toLowerCase().includes('cbm per pallet')) data.constants[cleanedKey] = cleanAndParse(value);
+                    else if (cleanedKey.toLowerCase().includes('storage')) data.rates[cleanedKey] = cleanAndParse(value);
                 }
+            });
+            return data;
+        }
+
+        async function fetchAndParseData() {
+            const sheetName = 'Admin_PricingData';
+            const range = `${sheetName}!A1:J50`;
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Google Sheets API Error: ${errorData.error.message}`);
+                }
+                const rawData = await response.json();
+                pricingData = parseSheetData(rawData.values);
+                elements.appContainer.style.display = 'flex';
+            } catch (error) {
+                alert(`Fatal Error: Could not load pricing data. ${error.message}. Please check API Key and Sheet settings, then refresh.`);
+                console.error(error);
             }
         }
 
-        values.forEach(row => {
-            if (!row) return;
-            const key = row[8];
-            const value = row[9];
-            if(key) {
-                const cleanedKey = key.trim();
-                if(cleanedKey.toLowerCase().includes('surcharge')) data.rates[cleanedKey] = cleanAndParse(value);
-                else if (cleanedKey.toLowerCase().includes('cbm per pallet')) data.constants[cleanedKey] = cleanAndParse(value);
-                else if (cleanedKey.toLowerCase().includes('storage')) data.rates[cleanedKey] = cleanAndParse(value);
+        function calculateEstimate() {
+            const cbm = parseFloat(elements.cbm.value);
+            const cartonCount = parseInt(elements.cartonCount.value);
+            let skuCount = parseInt(elements.skuCount.value);
+
+            if (isNaN(skuCount) || skuCount <= 0) {
+                skuCount = 1;
             }
-        });
-        return data;
-    }
-
-    async function fetchAndParseData() {
-        const sheetName = 'Admin_PricingData';
-        const range = `${sheetName}!A1:J50`;
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Google Sheets API Error: ${errorData.error.message}`);
+           
+            const loadType = elements.loadType.value;
+            const location = elements.location.value;
+            const storageRequired = elements.storage.querySelector('.active').dataset.value === 'Yes';
+           
+            if (isNaN(cbm) || cbm <= 0 || isNaN(cartonCount) || cartonCount <= 0) {
+                alert('Please enter valid, positive numbers for CBM and Carton Count.');
+                return;
             }
-            const rawData = await response.json();
-            pricingData = parseSheetData(rawData.values);
-            elements.appContainer.style.display = 'flex';
-        } catch (error) {
-            alert(`Fatal Error: Could not load pricing data. ${error.message}. Please check API Key and Sheet settings, then refresh.`);
-            console.error(error);
-        }
-    }
-
-    function calculateEstimate() {
-        const cbm = parseFloat(elements.cbm.value);
-        const cartonCount = parseInt(elements.cartonCount.value);
-        let skuCount = parseInt(elements.skuCount.value);
-
-        if (isNaN(skuCount) || skuCount <= 0) {
-            skuCount = 1;
-        }
-       
-        const loadType = elements.loadType.value;
-        const location = elements.location.value;
-        const storageRequired = elements.storage.querySelector('.active').dataset.value === 'Yes';
-       
-        if (isNaN(cbm) || cbm <= 0 || isNaN(cartonCount) || cartonCount <= 0) {
-            alert('Please enter valid, positive numbers for CBM and Carton Count.');
-            return;
-        }
-        if (!loadType || !location) {
-            alert('Please select a Type of Load and a Location.');
-            return;
-        }
-
-        // UPDATED: Determine the normalized key for lookup
-        let containerKey;
-        if (cbm <= 32) containerKey = '20GP';
-        else if (cbm >= 33 && cbm <= 65) containerKey = '40GPHQ'; // Normalized key
-        else containerKey = '45HQ';
-
-        // UPDATED: Use the normalized key to find the pricing object
-        const corePricing = pricingData.locations[location]?.[containerKey];
-        if (!corePricing) {
-            alert(`Error: Could not find pricing for ${location} and container key ${containerKey}. Please check the container names in the Google Sheet.`);
-            return;
-        }
-       
-        const carrierInfo = pricingData.carrier[location];
-        if (!carrierInfo) {
-            alert(`Error: Could not find carrier info for ${location}.`);
-            return;
-        }
-
-        if (loadType === 'Floor in/Floor out') {
-            calculateFloorLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo);
-        } else if (loadType === 'Palletized') {
-            calculatePalletizedLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo);
-        }
-
-        elements.resultsPane.style.display = 'block';
-    }
-
-    function calculateFloorLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo) {
-        const cartonSurcharge = Math.max(0, cartonCount - corePricing.includedCartons) * (pricingData.rates['Carton Surcharge (Floor in/Pallet out)'] || 0);
-        const skuSurcharge = (skuCount > corePricing.includedSkus) ? (pricingData.rates['Sort Surcharge (Floor in/Floor out)'] || 0) : 0;
-        const chassisCost = (carrierInfo.standardChassisDays > carrierInfo.freeChassisDays) ? carrierInfo.chassisCost : 0;
-        const totalCarrierCost = carrierInfo.drayRate + carrierInfo.csrCommission + chassisCost;
-        const storageFee = storageRequired ? cbm * (pricingData.rates['Storage CBM/Day (All)'] || 0) : 0;
-        const allInRate = corePricing.basePrice + cartonSurcharge + skuSurcharge + totalCarrierCost + storageFee;
-       
-        // UPDATED: Use the stored displayName for the output
-        elements.containerType.textContent = corePricing.displayName;
-        elements.palletCount.textContent = "-";
-        elements.allInRate.textContent = allInRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-    }
-   
-    function calculatePalletizedLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo) {
-        const opsPallets = Math.ceil(cbm / (pricingData.constants['CBM per Pallet (Operations)'] || 2.20));
-        const warehousePallets = Math.ceil(cbm / (pricingData.constants['CBM per Pallet (Warehouse)'] || 1.70));
-       
-        const cartonSurcharge = Math.max(0, cartonCount - corePricing.includedCartons) * (pricingData.rates['Carton Surcharge (Floor in/Pallet out)'] || 0);
-        const skuSurcharge = (skuCount > corePricing.includedSkus) ? (pricingData.rates['Sort Surcharge (Floor in/Pallet out)'] || 0) : 0;
-        const chassisCost = (carrierInfo.standardChassisDays > carrierInfo.freeChassisDays) ? carrierInfo.chassisCost : 0;
-        const totalCarrierCost = carrierInfo.drayRate + carrierInfo.csrCommission + chassisCost;
-        const storageFee = storageRequired ? cbm * (pricingData.rates['Storage CBM/Day (All)'] || 0) : 0;
-        const commonCosts = corePricing.basePrice + cartonSurcharge + skuSurcharge + totalCarrierCost + storageFee;
-        const outboundPalletRate = pricingData.rates['Outbound Pallet Surcharge (Floor in/Pallet out)'] || 0;
-        const outboundOpsSurcharge = opsPallets * outboundPalletRate;
-        const outboundWarehouseSurcharge = warehousePallets * outboundPalletRate;
-       
-        const lowEndRate = commonCosts + outboundOpsSurcharge;
-        const highEndRate = commonCosts + outboundWarehouseSurcharge;
-
-        // UPDATED: Use the stored displayName for the output
-        elements.containerType.textContent = corePricing.displayName;
-        elements.palletCount.textContent = `${opsPallets} - ${warehousePallets}`;
-        elements.allInRate.textContent = `${lowEndRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} - ${highEndRate.toLocaleString('en-US', { style: 'currency', 'currency': 'USD' })}`;
-    }
-
-    function clearForm() {
-        elements.cbm.value = '';
-        elements.cartonCount.value = '';
-        elements.skuCount.value = '';
-        elements.loadType.value = '';
-        elements.location.value = '';
-        elements.resultsPane.style.display = 'none';
-        elements.storage.querySelector('[data-value="Yes"]').classList.remove('active');
-        elements.storage.querySelector('[data-value="No"]').classList.add('active');
-        elements.cbm.focus();
-    }
-
-    function initialize() {
-        fetchAndParseData();
-        elements.storage.addEventListener('click', (event) => {
-            if (event.target.tagName === 'BUTTON') {
-                elements.storage.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
-                event.target.classList.add('active');
+            if (!loadType || !location) {
+                alert('Please select a Type of Load and a Location.');
+                return;
             }
-        });
-        elements.calculateBtn.addEventListener('click', calculateEstimate);
-        elements.clearBtn.addEventListener('click', clearForm);
-    }
 
-    initialize();
-</script>
+            let containerKey;
+            if (cbm <= 32) containerKey = '20GP';
+            else if (cbm >= 33 && cbm <= 65) containerKey = '40GPHQ';
+            else containerKey = '45HQ';
+
+            const corePricing = pricingData.locations[location]?.[containerKey];
+            if (!corePricing) {
+                alert(`Error: Could not find pricing for ${location} and container key ${containerKey}. Please check the container names in the Google Sheet.`);
+                return;
+            }
+           
+            const carrierInfo = pricingData.carrier[location];
+            if (!carrierInfo) {
+                alert(`Error: Could not find carrier info for ${location}.`);
+                return;
+            }
+
+            if (loadType === 'Floor in/Floor out') {
+                calculateFloorLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo);
+            } else if (loadType === 'Palletized') {
+                calculatePalletizedLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo);
+            }
+
+            elements.resultsPane.style.display = 'block';
+        }
+
+        function calculateFloorLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo) {
+            const cartonSurcharge = Math.max(0, cartonCount - corePricing.includedCartons) * (pricingData.rates['Carton Surcharge (Floor in/Pallet out)'] || 0);
+            // UPDATED: Calculate SKU surcharge on a per-SKU basis over the included amount
+            const skuSurcharge = Math.max(0, skuCount - corePricing.includedSkus) * (pricingData.rates['Sort Surcharge (Floor in/Floor out)'] || 0);
+            const chassisCost = (carrierInfo.standardChassisDays > carrierInfo.freeChassisDays) ? carrierInfo.chassisCost : 0;
+            const totalCarrierCost = carrierInfo.drayRate + carrierInfo.csrCommission + chassisCost;
+            const storageFee = storageRequired ? cbm * (pricingData.rates['Storage CBM/Day (All)'] || 0) : 0;
+            const allInRate = corePricing.basePrice + cartonSurcharge + skuSurcharge + totalCarrierCost + storageFee;
+           
+            elements.containerType.textContent = corePricing.displayName;
+            elements.palletCount.textContent = "-";
+            elements.allInRate.textContent = allInRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        }
+       
+        function calculatePalletizedLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo) {
+            const opsPallets = Math.ceil(cbm / (pricingData.constants['CBM per Pallet (Operations)'] || 2.20));
+            const warehousePallets = Math.ceil(cbm / (pricingData.constants['CBM per Pallet (Warehouse)'] || 1.70));
+           
+            const cartonSurcharge = Math.max(0, cartonCount - corePricing.includedCartons) * (pricingData.rates['Carton Surcharge (Floor in/Pallet out)'] || 0);
+            // UPDATED: Calculate SKU surcharge on a per-SKU basis over the included amount
+            const skuSurcharge = Math.max(0, skuCount - corePricing.includedSkus) * (pricingData.rates['Sort Surcharge (Floor in/Pallet out)'] || 0);
+            const chassisCost = (carrierInfo.standardChassisDays > carrierInfo.freeChassisDays) ? carrierInfo.chassisCost : 0;
+            const totalCarrierCost = carrierInfo.drayRate + carrierInfo.csrCommission + chassisCost;
+            const storageFee = storageRequired ? cbm * (pricingData.rates['Storage CBM/Day (All)'] || 0) : 0;
+            const commonCosts = corePricing.basePrice + cartonSurcharge + skuSurcharge + totalCarrierCost + storageFee;
+            const outboundPalletRate = pricingData.rates['Outbound Pallet Surcharge (Floor in/Pallet out)'] || 0;
+            const outboundOpsSurcharge = opsPallets * outboundPalletRate;
+            const outboundWarehouseSurcharge = warehousePallets * outboundPalletRate;
+           
+            const lowEndRate = commonCosts + outboundOpsSurcharge;
+            const highEndRate = commonCosts + outboundWarehouseSurcharge;
+
+            elements.containerType.textContent = corePricing.displayName;
+            elements.palletCount.textContent = `${opsPallets} - ${warehousePallets}`;
+            elements.allInRate.textContent = `${lowEndRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} - ${highEndRate.toLocaleString('en-US', { style: 'currency', 'currency': 'USD' })}`;
+        }
+
+        function clearForm() {
+            elements.cbm.value = '';
+            elements.cartonCount.value = '';
+            elements.skuCount.value = '';
+            elements.loadType.value = '';
+            elements.location.value = '';
+            elements.resultsPane.style.display = 'none';
+            // Ensure storage buttons default to "No"
+            elements.storage.querySelector('[data-value="Yes"]').classList.remove('active');
+            elements.storage.querySelector('[data-value="No"]').classList.add('active');
+            elements.cbm.focus();
+        }
+
+        function initialize() {
+            fetchAndParseData();
+            elements.storage.addEventListener('click', (event) => {
+                if (event.target.tagName === 'BUTTON') {
+                    elements.storage.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                    event.target.classList.add('active');
+                }
+            });
+            elements.calculateBtn.addEventListener('click', calculateEstimate);
+            elements.clearBtn.addEventListener('click', clearForm);
+        }
+
+        initialize();
+    </script>
 </body>
 </html>
