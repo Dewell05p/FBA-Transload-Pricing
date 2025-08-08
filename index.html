@@ -11,10 +11,7 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <style>
         body {
-            background-color: #f8fafc; /* Use a light gray background */
-        }
-        #app-container {
-            display: none; /* Hidden until password is confirmed */
+            background-color: #f8fafc;
         }
         #startBtn {
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
@@ -47,18 +44,23 @@
             border-color: #0d80f2;
         }
         .range-text {
-            font-size: 1.25rem; /* Slightly smaller for ranges */
+            font-size: 1.25rem;
         }
-        .icon-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            width: 48px;
-            height: 48px;
-            border-radius: 9999px; /* A large value to make it a circle */
-            background-color: #e0f2fe; /* Light blue background */
-            color: #0d80f2; /* Icon color */
+        /* Styles for the new storage days input */
+        #storageDays {
+            transition: opacity 0.3s ease-in-out, width 0.3s ease-in-out;
+            opacity: 0;
+            width: 0;
+            padding-left: 0;
+            padding-right: 0;
+            border-width: 0;
+        }
+        #storageDays.visible {
+            opacity: 1;
+            width: 80px; /* Adjust width as needed */
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+            border-width: 1px;
         }
     </style>
 </head>
@@ -75,7 +77,7 @@
                 </div>
             </header>
 
-    <div id="welcomePage" class="px-40 flex flex-1 justify-center py-5">
+            <div id="welcomePage" class="px-40 flex flex-1 justify-center py-5">
                 <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
                     <div class="@container">
                         <div class="@[480px]:p-4">
@@ -93,7 +95,7 @@
                     <h2 class="text-[#0d141c] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5 text-center">Key Amazon FBA Shipment Guidelines</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                         <div class="flex gap-4 bg-white p-4 rounded-lg border border-slate-200">
-                             <div class="text-[#0d80f2] flex items-center justify-center rounded-lg bg-[#e7edf4] shrink-0 size-12"><svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44-29.77,16.3-80.35-44ZM128,120,47.66,76l33.9-18.56,80.34,44ZM40,90l80,43.78v85.79L40,175.82Zm176,85.78h0l-80,43.79V133.82l32-17.51V152a8,8,0,0,0,16,0V107.55L216,90v85.77Z"></path></svg></div>
+                            <div class="text-[#0d80f2] flex items-center justify-center rounded-lg bg-[#e7edf4] shrink-0 size-12"><svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44-29.77,16.3-80.35-44ZM128,120,47.66,76l33.9-18.56,80.34,44ZM40,90l80,43.78v85.79L40,175.82Zm176,85.78h0l-80,43.79V133.82l32-17.51V152a8,8,0,0,0,16,0V107.55L216,90v85.77Z"></path></svg></div>
                             <div class="flex flex-1 flex-col justify-center">
                                 <p class="text-[#0d141c] text-base font-medium leading-normal">Carton Limits</p>
                                 <p class="text-[#49739c] text-sm font-normal leading-normal">Cartons must not exceed 25" on any side or weigh more than 50 lbs.</p>
@@ -106,27 +108,36 @@
                                 <p class="text-[#49739c] text-sm font-normal leading-normal">Use 40" x 48" pallets, not to exceed 72" in height or 1,500 lbs in weight.</p>
                             </div>
                         </div>
-                 <div class="flex gap-4 bg-white p-4 rounded-lg border border-slate-200">
-                     <div class="text-[#0d80f2] flex items-center justify-center rounded-lg bg-[#e7edf4] shrink-0 size-12"><svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M184,184a32,32,0,1,1-32-32A32,32,0,0,1,184,184ZM128,80a32,32,0,1,0-32-32A32,32,0,0,0,128,80Zm-32,72a32,32,0,1,0,32,32A32,32,0,0,0,96,152ZM160,80a32,32,0,1,0,32-32A32,32,0,0,0,160,80Z"></path></svg></div>
-                     <div class="flex flex-1 flex-col justify-center">
-                          <p class="text-[#0d141c] text-base font-medium leading-normal">Oversized Products</p>
-                         <p class="text-[#49739c] text-sm font-normal leading-normal">A single item is oversized if it is over 20 lbs or has any side longer than 18".</p>
+                        <div class="flex gap-4 bg-white p-4 rounded-lg border border-slate-200">
+                            <div class="text-[#0d80f2] flex items-center justify-center rounded-lg bg-[#e7edf4] shrink-0 size-12"><svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M184,184a32,32,0,1,1-32-32A32,32,0,0,1,184,184ZM128,80a32,32,0,1,0-32-32A32,32,0,0,0,128,80Zm-32,72a32,32,0,1,0,32,32A32,32,0,0,0,96,152ZM160,80a32,32,0,1,0,32-32A32,32,0,0,0,160,80Z"></path></svg></div>
+                            <div class="flex flex-1 flex-col justify-center">
+                                <p class="text-[#0d141c] text-base font-medium leading-normal">Oversized Products</p>
+                                <p class="text-[#49739c] text-sm font-normal leading-normal">A single item is oversized if it is over 20 lbs or has any side longer than 18".</p>
+                            </div>
+                        </div>
                     </div>
-                 </div>
+                </div>
             </div>
-         </div>
-    </div>
-            
-            <div id="calculatorPage" class="flex flex-1 justify-center py-5 px-10" style="display:none;">
+           
+            <div id="calculatorPage" class="flex-1 justify-center py-5 px-10" style="display:none;">
                 <div class="layout-content-container flex flex-col w-full max-w-4xl flex-1">
-                    <h2 class="text-2xl font-bold text-center text-slate-700">Estimate Costs and Configuration</h2>
+                    <h2 class="text-2xl font-bold text-center text-slate-700">Estimate Your Costs</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 text-left bg-white p-8 rounded-lg shadow-md border border-slate-200">
                         <div class="form-group"><label for="cbm" class="block text-sm font-medium text-gray-700">CBM (m³)</label><input type="number" id="cbm" placeholder="e.g., 53" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
                         <div class="form-group"><label for="cartonCount" class="block text-sm font-medium text-gray-700">Carton Count</label><input type="number" id="cartonCount" placeholder="e.g., 1200" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
                         <div class="form-group"><label for="skuCount" class="block text-sm font-medium text-gray-700">SKU Count</label><input type="number" id="skuCount" placeholder="Optional" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></div>
                         <div class="form-group"><label for="loadType" class="block text-sm font-medium text-gray-700">Type of Load</label><select id="loadType" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"><option value="" disabled selected>Select...</option><option value="Floor in/Floor out">Floor in/Floor out</option><option value="Palletized">Palletized</option></select></div>
                         <div class="form-group"><label for="location" class="block text-sm font-medium text-gray-700">Location</label><select id="location" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"><option value="" disabled selected>Select...</option><option value="LOS ANGELES">Los Angeles</option><option value="SAVANNAH">Savannah</option><option value="NEW YORK">New York</option></select></div>
-                        <div class="form-group"><label class="block text-sm font-medium text-gray-700">Storage Required?</label><div id="storage" class="flex mt-1"><button class="storage-btn" data-value="Yes">Yes</button><button class="storage-btn active" data-value="No">No</button></div></div>
+                        <div class="form-group">
+                            <label class="block text-sm font-medium text-gray-700">Storage Required?</label>
+                            <div class="flex items-center mt-1 space-x-2">
+                                <div id="storage">
+                                    <button class="storage-btn" data-value="Yes">Yes</button>
+                                    <button class="storage-btn active" data-value="No">No</button>
+                                </div>
+                                <input type="number" id="storageDays" placeholder="Days" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" disabled>
+                            </div>
+                        </div>
                     </div>
                     <div class="flex gap-4 mt-8">
                         <button id="calculateBtn" class="flex-1 flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#0d80f2] text-slate-50 text-base font-bold shadow-md hover:bg-blue-700 transition-colors"><span class="truncate">Calculate</span></button>
@@ -155,7 +166,6 @@
         // --- Configuration ---
         const API_KEY = 'AIzaSyAgRYDlwfXHI0AWVOpY8OHHCd7aVgS4Bcc';
         const SPREADSHEET_ID = '1QrO4kP9ikY8Ukr8sxi6egOcPJkbaiGLvx7r4nuDn7cU';
-        const PASSWORD = 'admin123';
         // ---------------------
 
         let pricingData = {};
@@ -170,6 +180,7 @@
             loadType: document.getElementById('loadType'),
             location: document.getElementById('location'),
             storage: document.getElementById('storage'),
+            storageDays: document.getElementById('storageDays'), // New element
             calculateBtn: document.getElementById('calculateBtn'),
             clearBtn: document.getElementById('clearBtn'),
             resultsPane: document.getElementById('resultsPane'),
@@ -179,6 +190,7 @@
             labelingNote: document.getElementById('labelingNote')
         };
 
+        // All data parsing logic remains the same
         function parseSheetData(values) {
             const data = { locations: {}, carrier: {}, rates: {}, constants: {} };
             const cleanAndParse = (input, isFloat = true) => {
@@ -188,8 +200,6 @@
                 return isNaN(number) ? 0 : number;
             };
             const findHeaderRow = (headerText) => values.findIndex(row => row && row[0] && row[0].trim().toUpperCase() === headerText.toUpperCase());
-
-            // Location Pricing
             const locationHeaders = ["LOS ANGELES PRICING", "SAVANNAH PRICING", "NEW YORK PRICING"];
             locationHeaders.forEach(header => {
                 const startRow = findHeaderRow(header);
@@ -200,42 +210,25 @@
                         const row = values[i];
                         if (row && row[0]) {
                             const normalizedKey = row[0].trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-                            data.locations[locationKey][normalizedKey] = {
-                                basePrice: cleanAndParse(row[1]),
-                                includedCartons: cleanAndParse(row[2], false),
-                                includedSkus: cleanAndParse(row[3], false),
-                                displayName: row[0].trim()
-                            };
+                            data.locations[locationKey][normalizedKey] = { basePrice: cleanAndParse(row[1]), includedCartons: cleanAndParse(row[2], false), includedSkus: cleanAndParse(row[3], false), displayName: row[0].trim() };
                         }
                     }
                 }
             });
-
-            // Carrier Pricing
             const carrierStartRow = findHeaderRow("CARRIER PRICING");
             if (carrierStartRow !== -1) {
                 for (let i = carrierStartRow + 2; i < carrierStartRow + 5; i++) {
                     const row = values[i];
                     if (row && row[0]) {
-                        data.carrier[row[0].toUpperCase()] = {
-                            drayRate: cleanAndParse(row[2]),
-                            chassisCost: cleanAndParse(row[3]),
-                            standardChassisDays: cleanAndParse(row[4], false),
-                            freeChassisDays: cleanAndParse(row[5], false),
-                            csrCommission: cleanAndParse(row[6])
-                        };
+                        data.carrier[row[0].toUpperCase()] = { drayRate: cleanAndParse(row[2]), chassisCost: cleanAndParse(row[3]), standardChassisDays: cleanAndParse(row[4], false), freeChassisDays: cleanAndParse(row[5], false), csrCommission: cleanAndParse(row[6]) };
                     }
                 }
             }
-
-            // Rates, Constants, and Labeling Fees
             values.forEach(row => {
                 if (!row || !row[8]) return;
                 const key = row[8].trim();
                 const value = cleanAndParse(row[9]);
-                if (key.toLowerCase().includes('labeling')) {
-                    data.rates[key] = value;
-                } else if (key.toLowerCase().includes('surcharge') || key.toLowerCase().includes('storage')) {
+                if (key.toLowerCase().includes('labeling') || key.toLowerCase().includes('surcharge') || key.toLowerCase().includes('storage')) {
                     data.rates[key] = value;
                 } else {
                     data.constants[key] = value;
@@ -256,11 +249,8 @@
                 }
                 const rawData = await response.json();
                 pricingData = parseSheetData(rawData.values);
-               
-                // Dynamically update the labeling note
                 const regLabel = (pricingData.rates['Labeling (Regular label, All)'] || 0).toLocaleString('en-US', {style:'currency', currency:'USD'});
                 elements.labelingNote.innerHTML = `<strong>Labeling Costs:</strong> Optional FNSKU labeling is available. The standard rate is ${regLabel} per label. Please contact us for other labeling needs.`;
-               
             } catch (error) {
                 alert(`Fatal Error: Could not load pricing data. ${error.message}. Please check API Key and Sheet settings, then refresh.`);
                 console.error(error);
@@ -276,8 +266,11 @@
             const loadType = elements.loadType.value;
             const location = elements.location.value;
             const storageRequired = elements.storage.querySelector('.active').dataset.value === 'Yes';
+            // NEW: Get storage days, default to 0 if not required or invalid
+            const storageDays = storageRequired ? (parseInt(elements.storageDays.value) || 0) : 0;
            
             if (isNaN(cbm) || cbm <= 0 || isNaN(cartonCount) || cartonCount <= 0) { alert('Please enter valid, positive numbers for CBM and Carton Count.'); return; }
+            if (storageRequired && storageDays <= 0) { alert('Please enter a valid number of days for storage.'); return; }
             if (!loadType || !location) { alert('Please select a Type of Load and a Location.'); return; }
 
             let containerKey;
@@ -291,18 +284,21 @@
             const carrierInfo = pricingData.carrier[location];
             if (!carrierInfo) { alert(`Error: Could not find carrier info for ${location}.`); return; }
 
-            if (loadType === 'Floor in/Floor out') calculateFloorLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo);
-            else if (loadType === 'Palletized') calculatePalletizedLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo);
+            // Pass storageDays to calculation functions
+            if (loadType === 'Floor in/Floor out') calculateFloorLoad(cbm, cartonCount, skuCount, storageDays, corePricing, carrierInfo);
+            else if (loadType === 'Palletized') calculatePalletizedLoad(cbm, cartonCount, skuCount, storageDays, corePricing, carrierInfo);
 
             elements.resultsPane.classList.add('visible');
         }
 
-        function calculateFloorLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo) {
+        // UPDATED: Function now accepts storageDays
+        function calculateFloorLoad(cbm, cartonCount, skuCount, storageDays, corePricing, carrierInfo) {
             const cartonSurcharge = Math.max(0, cartonCount - corePricing.includedCartons) * (pricingData.rates['Carton Surcharge (Floor in/Pallet out)'] || 0);
             const skuSurcharge = Math.max(0, skuCount - corePricing.includedSkus) * (pricingData.rates['Sort Surcharge (Floor in/Floor out)'] || 0);
             const chassisCost = (carrierInfo.standardChassisDays > carrierInfo.freeChassisDays) ? carrierInfo.chassisCost : 0;
             const totalCarrierCost = carrierInfo.drayRate + carrierInfo.csrCommission + chassisCost;
-            const storageFee = storageRequired ? cbm * (pricingData.rates['Storage CBM/Day (All)'] || 0) : 0;
+            // UPDATED: Storage fee calculation
+            const storageFee = storageDays > 0 ? cbm * (pricingData.rates['Storage CBM/Day (All)'] || 0) * storageDays : 0;
             const allInRate = corePricing.basePrice + cartonSurcharge + skuSurcharge + totalCarrierCost + storageFee;
            
             elements.containerType.textContent = corePricing.displayName;
@@ -310,7 +306,8 @@
             elements.allInRate.textContent = allInRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
         }
        
-        function calculatePalletizedLoad(cbm, cartonCount, skuCount, storageRequired, corePricing, carrierInfo) {
+        // UPDATED: Function now accepts storageDays
+        function calculatePalletizedLoad(cbm, cartonCount, skuCount, storageDays, corePricing, carrierInfo) {
             const opsPallets = Math.ceil(cbm / (pricingData.constants['CBM per Pallet (Operations)'] || 2.20));
             const warehousePallets = Math.ceil(cbm / (pricingData.constants['CBM per Pallet (Warehouse)'] || 1.70));
            
@@ -318,7 +315,8 @@
             const skuSurcharge = Math.max(0, skuCount - corePricing.includedSkus) * (pricingData.rates['Sort Surcharge (Floor in/Pallet out)'] || 0);
             const chassisCost = (carrierInfo.standardChassisDays > carrierInfo.freeChassisDays) ? carrierInfo.chassisCost : 0;
             const totalCarrierCost = carrierInfo.drayRate + carrierInfo.csrCommission + chassisCost;
-            const storageFee = storageRequired ? cbm * (pricingData.rates['Storage CBM/Day (All)'] || 0) : 0;
+            // UPDATED: Storage fee calculation
+            const storageFee = storageDays > 0 ? cbm * (pricingData.rates['Storage CBM/Day (All)'] || 0) * storageDays : 0;
             const commonCosts = corePricing.basePrice + cartonSurcharge + skuSurcharge + totalCarrierCost + storageFee;
             const outboundPalletRate = pricingData.rates['Outbound Pallet Surcharge (Floor in/Pallet out)'] || 0;
            
@@ -339,6 +337,10 @@
             elements.resultsPane.classList.remove('visible');
             elements.storage.querySelector('[data-value="Yes"]').classList.remove('active');
             elements.storage.querySelector('[data-value="No"]').classList.add('active');
+            // NEW: Hide and clear the storage days input
+            elements.storageDays.classList.remove('visible');
+            elements.storageDays.disabled = true;
+            elements.storageDays.value = '';
             elements.cbm.focus();
         }
 
@@ -349,17 +351,26 @@
                 elements.cbm.focus();
             });
 
+            // UPDATED: Event listener for storage buttons to handle the new input
             elements.storage.addEventListener('click', (event) => {
                 if (event.target.tagName === 'BUTTON') {
                     elements.storage.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
                     event.target.classList.add('active');
+                   
+                    const isYes = event.target.dataset.value === 'Yes';
+                    elements.storageDays.classList.toggle('visible', isYes);
+                    elements.storageDays.disabled = !isYes;
+                    if (isYes) {
+                        elements.storageDays.focus();
+                    } else {
+                        elements.storageDays.value = '';
+                    }
                 }
             });
 
             elements.calculateBtn.addEventListener('click', calculateEstimate);
             elements.clearBtn.addEventListener('click', clearForm);
 
-            // "Enter" key navigation
             const inputs = [elements.cbm, elements.cartonCount, elements.skuCount, elements.loadType];
             inputs.forEach((input, index) => {
                 input.addEventListener('keydown', (event) => {
@@ -369,7 +380,7 @@
                         if (nextInput) {
                             nextInput.focus();
                         } else {
-                            elements.location.focus(); // Special case for last input
+                            elements.location.focus();
                         }
                     }
                 });
@@ -377,20 +388,13 @@
         }
 
         function initialize() {
-            const userPassword = prompt("Please enter the password to access:", "");
-            if (userPassword === PASSWORD) {
-                elements.appContainer.style.display = 'flex';
-                fetchAndParseData();
-                setupEventListeners();
-            } else {
-                document.body.innerHTML = `<div class="w-full h-screen flex items-center justify-center"><h1 class="text-red-500 text-center text-2xl p-8">Access Denied</h1></div>`;
-            }
+            // REMOVED: All password-related code
+            elements.appContainer.style.display = 'flex'; // Show the app immediately
+            fetchAndParseData();
+            setupEventListeners();
         }
 
         initialize();
     </script>
 </body>
 </html>
-
-
-
